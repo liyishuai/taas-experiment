@@ -39,6 +39,11 @@ pd-server --name="pd" \
           --log-file=pd.log
 ```
 
+```
+export HOST_IP="11.158.168.215"
+pd-server --name="pd" --data-dir="pd" --client-urls="http://${HOST_IP}:2379" --peer-urls="http://${HOST_IP}:2380" --log-file=pd.log
+```
+
 Using `curl` to view PD members:
 
 ```bash

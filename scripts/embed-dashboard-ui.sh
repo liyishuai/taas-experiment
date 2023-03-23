@@ -55,7 +55,7 @@ function download_embed_asset {
     DOWNLOAD_URL="https://github.com/pingcap/tidb-dashboard/releases/download/v${DASHBOARD_RELEASE_VERSION}/embedded-assets-golang.zip"
     DOWNLOAD_FILE=${CACHE_DIR}/embedded-assets-golang.zip
     echo "  - Download ${DOWNLOAD_URL}"
-    if ! curl -L "${DOWNLOAD_URL}" --fail --output "${DOWNLOAD_FILE}"; then
+    if true; then
       echo
       echo -e "${RED}Error: Failed to download assets of TiDB Dashboard release version ${DASHBOARD_RELEASE_VERSION}.${NC}"
       if [ "${DASHBOARD_RELEASE_VERSION}" == "nightly" ]; then
