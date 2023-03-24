@@ -278,3 +278,20 @@ clean-build:
 	rm -rf $(GO_TOOLS_BIN_PATH)
 
 .PHONY: clean clean-test clean-build
+
+
+
+### Run tso benchmark locally
+QUORUM_SIZE := 3
+LOCAL_IP := $(shell hostname -i)
+local-pd: 
+	cd playground; for ((i=1;i<=$(QUORUM_SIZE); i++));do mkdir -p p$$i; cd p$$i && ln -s ../../bin/pd-server ./pd-server && cp ../run.sh ./ && ./run.sh && cd -; done
+
+clean-local:
+	cd playground; for	((i=1;i<=$(QUORUM_SIZE); i++)); do rm -rf p$$i; done;
+	for	((i=1;i<=$(QUORUM_SIZE); i++)); do pkill -of 'pd-server --name=pd$$i'; sleep 1; done;
+
+local-bench: pd-tso-bench
+	./bin/pd-tso-bench  -client 10 -c 10 -duration 1m -pd $(LOCAL_IP):3010  -v  > tso_bench.log 2>&1 &
+
+.PHONY: local-pd local-bench clean-local
