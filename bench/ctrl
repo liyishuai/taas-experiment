@@ -1,0 +1,163 @@
+#!/home/tops/bin/python
+import os,sys
+import subprocess
+import argparse
+import commands
+import time
+import json
+import yaml
+import traceback
+from threading import Thread
+
+def Async(f):
+    def wrapper(*args, **kwargs):
+        thr = Thread(target=f, args=args, kwargs=kwargs)
+        thr.start()
+    return wrapper
+        
+def ExecCmd(cmd):
+    print("exec cmd[%s]" % cmd)
+    p = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    stdout,stderr = p.communicate()
+    if p.returncode:
+        # traceback.print_exc()
+        raise Exception ("exec cmd[%s] failed, stdout[%s], stderr[%s]" % (cmd, stdout, stderr))
+    return (p.returncode, stdout, stderr)
+
+@Async
+def ExecCmdAsync(cmd):
+    print("async exec cmd[%s]" % cmd)
+    p = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    stdout,stderr = p.communicate()
+    # if p.returncode:
+    #     traceback.print_exc()
+    #     raise Exception ("exec cmd[%s] failed, stdout[%s], stderr[%s]" % (cmd, stdout, stderr))
+    return (p.returncode, stdout, stderr)
+
+def ReadFromJsonFile(filePath):
+    if os.path.exists(filePath):
+        with open(filePath, 'r') as f:
+            res = json.loads(f.read())
+            return res
+        
+
+# Manipulate servers and clients 
+def ServerUploadBinCfgs(serverList=[]):
+    serverListStr = ' '.join("admin@"+x for x in serverList)
+    idx = 0
+    for replicaIp in serverList:
+        idx += 1
+        cmdUploadServerCfg = r"/usr/bin/scp ../bin/pd-server admin@%(replicaIp)s:/home/admin/taas/server/;ssh admin@%(replicaIp)s 'cd /home/admin/taas/server/;md5sum pd-server' " % ({"replicaIp": replicaIp})
+        try:
+            ret = ExecCmdAsync(cmdUploadServerCfg)
+        except Exception as e:
+            traceback.print_exc()
+
+
+def ClientUploadBinCfgs(clientList=[]):
+    pass
+
+def ServerStart(consensusType, serverList=[]):
+    pass
+
+def ServerEnd(serverList=[]):
+    pass
+
+def ServerLookStatus(serverList=[]):
+    pass
+
+def ClientStart(consensusType, opCnt, limitCnt, clientList=[], serverCfg={}):
+    pass
+
+def ClientEnd(clientList=[]):
+    pass
+
+def ClientLookStatus(clientList=[]):
+    pass
+
+def RecordClientOutput(consensusType, opCnt, limitCnt, clientList=[], serverList=[]):
+    clientListStr = ' '.join("admin@"+x for x in clientList)
+    cmd = r"pssh -iH '%s' 'logf=/home/admin/stat_log/tmp.log;cp /home/admin/rwpaxos/client/out.out ${logf};grep -a -A10 statistics4rwpaxos ${logf} > ${logf}.stat';" % (clientListStr)
+    ret = ExecCmdAsync(cmd)
+    rTimeCmd = r"pssh -iH '%s' 'logf=/home/admin/stat_log/time.log;cp /home/admin/rwpaxos/client/out.out ${logf};grep -A3 Cost ${logf} > ${logf}.stat';" % (clientListStr)
+    ret = ExecCmd(rTimeCmd)
+    return ret
+
+def AllEnd(serverList=[], clientList=[]):
+    ServerEnd(serverList)
+    ClientEnd(clientList)
+
+def CustomCmd(customList=[], cmd="echo"):
+    customListStr = ' '.join("admin@"+x for x in customList)
+    cmd = r"pssh -iH '%s' '%s' " % (clientListStr, cmd)
+    ret = ExecCmd(cmd)
+    print (ret[1])
+    return ret
+
+def ServerKillLeader(serverList=[]):
+    # TODO: find leader
+    exit(0)
+    leaderIp = machineIpMap[leaderHost]
+    dropList =  machineIpMap.values()
+    dropList.remove(leaderIp)
+    dropList.sort()
+    # leaderNum = int(leaderIp.split(".")[-1])
+    print "[KILL] %s %s" % (leaderHost, leaderIp)
+    print "[DROP]\n%s" % ("\n".join(" - "+x for x in dropList))
+
+    ret = IptableDropByIp(leaderIp, dropList)
+    time.sleep(5)
+    ret = IptableAcceptByIp(leaderIp,  dropList)
+    # time.sleep(5)
+    return ret
+
+def IptableDropByIp(serverIp, dropIpList):
+    for rule in dropIpList:
+        try:
+            cmd = r"ssh admin@%s 'sudo iptables -I INPUT -s %s -j DROP'" % (serverIp, rule)
+            ExecCmdAsync(cmd)
+        except Exception, e:
+            pass
+    return True
+
+def IptableAcceptByIp(serverIp, dropIpList):
+    for rule in dropIpList:
+        try:
+            cmd = r"ssh admin@%s 'sudo iptables -D INPUT -s %s -j DROP'" % (serverIp, rule)
+            ExecCmd(cmd)
+        except Exception, e:
+            pass
+    return True
+
+
+CTRL_FUNC_DICT = {
+    'sup': ServerUploadBinCfgs,
+    'cup': ClientUploadBinCfgs,
+    'ss' : ServerStart,
+    'se' : ServerEnd,
+    'sl' : ServerLookStatus,
+    'sk' : ServerKillLeader,
+    'cs' : ClientStart,
+    'ce' : ClientEnd,
+    'cl' : ClientLookStatus,
+    'cr' : RecordClientOutput,
+    'ae' : AllEnd
+}
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Control rwpaxos test")
+    parser.add_argument("-c", "--cmd", required=True, help="Specify the commands to control.")
+
+    args = parser.parse_args()
+
+    with open("./bench_cfg.yaml", 'r') as f:
+        benchCfg = yaml.load(f.read())
+    serverList = benchCfg["ServerEndpoint"]
+    # Exec cmds
+    ctrlCmd = args.cmd
+    if CTRL_FUNC_DICT.has_key(ctrlCmd):
+        print (ctrlCmd)
+        func = CTRL_FUNC_DICT[ctrlCmd]
+        if ctrlCmd.startswith("s"):
+            func(serverList)
+    else:
+        CustomCmd(tList, ctrlCmd)
