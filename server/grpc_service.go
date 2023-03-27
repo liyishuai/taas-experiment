@@ -305,6 +305,7 @@ func (s *GrpcServer) handleDispatcher(ctx context.Context, forwardedHost string,
 		goto errHandling
 	}
 	log.Info("create tso forward stream", zap.String("forwarded-host", forwardedHost))
+	log.Info("server withTSOProto: ", zap.String("MCS", strconv.FormatBool((withTSOProto))))
 	if withTSOProto {
 		forwardMCSStream, cancel, err = s.createMCSTSOForwardStream(client)
 	} else {

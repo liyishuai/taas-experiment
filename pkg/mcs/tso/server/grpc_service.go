@@ -205,6 +205,7 @@ func (s *Service) handleDispatcher(ctx context.Context, forwardedHost string, ts
 	if err != nil {
 		goto errHandling
 	}
+	log.Info("mcs/tso/server withTSOProto: ")
 	log.Info("create tso forward stream", zap.String("forwarded-host", forwardedHost))
 	forwardStream, cancel, err = s.CreateTsoForwardStream(client)
 errHandling:
