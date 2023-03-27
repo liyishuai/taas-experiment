@@ -38,6 +38,7 @@ import (
 	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
+	//"fmt"
 )
 
 const (
@@ -74,6 +75,7 @@ type Client interface {
 	// GetLeaderAddr returns current leader's address. It returns "" before
 	// syncing leader from server.
 	GetLeaderAddr() string
+	TestAsync(ctx context.Context, dcLocation string) (physical int64, logical int64, err error)
 	// GetRegion gets a region and its leader Peer from PD by key.
 	// The region may expire after split. Caller is responsible for caching and
 	// taking care of region change.
@@ -603,6 +605,7 @@ func (c *client) GetLocalTSAsync(ctx context.Context, dcLocation string) TSFutur
 	req.start = time.Now()
 	req.keyspaceID = c.keyspaceID
 	req.dcLocation = dcLocation
+	fmt.Println(req.keyspaceID)
 
 	if tsoClient == nil {
 		req.done <- errs.ErrClientGetTSO
@@ -628,7 +631,12 @@ func (c *client) GetLocalTS(ctx context.Context, dcLocation string) (physical in
 	resp := c.GetLocalTSAsync(ctx, dcLocation)
 	return resp.Wait()
 }
-
+func (c *client) TestAsync(ctx context.Context, dcLocation string) (physical int64, logical int64, err error) {
+      fmt.Println("TEST")
+	  req:=c.GetLocalTSAsync(ctx, globalDCLocation)
+	  return req.Wait()
+	  //return {}
+}
 func handleRegionResponse(res *pdpb.GetRegionResponse) *Region {
 	if res.Region == nil {
 		return nil

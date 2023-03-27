@@ -113,6 +113,7 @@ func bench(mainCtx context.Context) {
 	// To avoid the first time high latency.
 	for idx, pdCli := range pdClients {
 		_, _, err := pdCli.GetLocalTS(ctx, *dcLocation)
+		///_, _, err := pdCli.TestAsync(ctx, *dcLocation)
 		if err != nil {
 			log.Fatal("get first time tso failed", zap.Int("client-number", idx), zap.Error(err))
 		}
@@ -354,6 +355,8 @@ func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration) {
 			sleepIntervalOnFailure time.Duration = 100 * time.Millisecond
 		)
 		for ; i < maxRetryTime; i++ {
+		
+		    //_, _, err := pdCli.TestAsync(ctx, *dcLocation)
 			_, _, err = pdCli.GetLocalTS(reqCtx, *dcLocation)
 			if errors.Cause(err) == context.Canceled {
 				return
