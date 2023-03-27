@@ -26,7 +26,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pingcap/failpoint"
 	"github.com/pingcap/kvproto/pkg/metapb"
-	"github.com/pingcap/kvproto/pkg/pdpb"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"github.com/pingcap/kvproto/pkg/replication_modepb"
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/pkg/core"

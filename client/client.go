@@ -27,12 +27,12 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
 	"github.com/pingcap/kvproto/pkg/metapb"
-	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/pingcap/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tikv/pd/client/errs"
 	"github.com/tikv/pd/client/grpcutil"
 	"github.com/tikv/pd/client/tlsutil"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -605,7 +605,7 @@ func (c *client) GetLocalTSAsync(ctx context.Context, dcLocation string) TSFutur
 	req.start = time.Now()
 	req.keyspaceID = c.keyspaceID
 	req.dcLocation = dcLocation
-	fmt.Println(req.keyspaceID)
+	//fmt.Println(req.keyspaceID)
 
 	if tsoClient == nil {
 		req.done <- errs.ErrClientGetTSO
@@ -632,10 +632,10 @@ func (c *client) GetLocalTS(ctx context.Context, dcLocation string) (physical in
 	return resp.Wait()
 }
 func (c *client) TestAsync(ctx context.Context, dcLocation string) (physical int64, logical int64, err error) {
-      fmt.Println("TEST")
-	  req:=c.GetLocalTSAsync(ctx, globalDCLocation)
-	  return req.Wait()
-	  //return {}
+	fmt.Println("TEST")
+	req := c.GetLocalTSAsync(ctx, globalDCLocation)
+	return req.Wait()
+	//return {}
 }
 func handleRegionResponse(res *pdpb.GetRegionResponse) *Region {
 	if res.Region == nil {

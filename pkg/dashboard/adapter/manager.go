@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pingcap/kvproto/pkg/pdpb"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"github.com/pingcap/log"
 	"github.com/pingcap/tidb-dashboard/pkg/apiserver"
 	"github.com/tikv/pd/pkg/errs"

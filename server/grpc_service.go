@@ -26,8 +26,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
 	"github.com/pingcap/kvproto/pkg/metapb"
-	"github.com/pingcap/kvproto/pkg/pdpb"
-	"github.com/pingcap/kvproto/pkg/tsopb"
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/pkg/core"
 	"github.com/tikv/pd/pkg/errs"
@@ -40,6 +38,8 @@ import (
 	"github.com/tikv/pd/pkg/utils/tsoutil"
 	"github.com/tikv/pd/pkg/versioninfo"
 	"github.com/tikv/pd/server/cluster"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/tsopb"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -189,6 +189,10 @@ func (s *GrpcServer) GetMembers(context.Context, *pdpb.GetMembersRequest) (*pdpb
 }
 
 // Tso implements gRPC PDServer.
+func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
+	fmt.Println("taas")
+	return nil
+}
 func (s *GrpcServer) Tso(stream pdpb.PD_TsoServer) error {
 	var (
 		doneCh chan struct{}

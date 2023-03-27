@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/kvproto/pkg/pdpb"
-	"github.com/pingcap/kvproto/pkg/tsopb"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/tsopb"
 	"github.com/tikv/pd/client/errs"
 	"google.golang.org/grpc"
 )

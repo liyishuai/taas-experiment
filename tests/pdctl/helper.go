@@ -21,7 +21,7 @@ import (
 	"sort"
 
 	"github.com/pingcap/kvproto/pkg/metapb"
-	"github.com/pingcap/kvproto/pkg/pdpb"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 	"github.com/tikv/pd/pkg/core"

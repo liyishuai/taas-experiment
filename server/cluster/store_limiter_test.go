@@ -17,7 +17,7 @@ package cluster
 import (
 	"testing"
 
-	"github.com/pingcap/kvproto/pkg/pdpb"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"github.com/stretchr/testify/require"
 	"github.com/tikv/pd/pkg/core/storelimit"
 	"github.com/tikv/pd/pkg/mock/mockconfig"

@@ -8,6 +8,7 @@ require (
 	github.com/pingcap/log v1.1.1-0.20221110025148-ca232912c9f3
 	github.com/prometheus/client_golang v1.11.1
 	github.com/tikv/pd/client v0.0.0-00010101000000-000000000000
+	gitlab.alibaba-inc.com/zelu.wjz/taasplugin v0.0.0-20230327173335-41480a200cb0 // indirect
 	go.uber.org/zap v1.20.0
 )
 

@@ -21,10 +21,10 @@ import (
 	"strconv"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/kvproto/pkg/keyspacepb"
 	"github.com/tikv/pd/pkg/codec"
 	"github.com/tikv/pd/pkg/schedule/labeler"
 	"github.com/tikv/pd/pkg/storage/endpoint"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/keyspacepb"
 )
 
 const (

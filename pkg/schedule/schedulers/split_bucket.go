@@ -22,7 +22,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/pingcap/kvproto/pkg/pdpb"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"github.com/tikv/pd/pkg/core"
 	"github.com/tikv/pd/pkg/schedule"
 	"github.com/tikv/pd/pkg/schedule/operator"

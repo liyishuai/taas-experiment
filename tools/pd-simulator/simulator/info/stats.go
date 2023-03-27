@@ -14,7 +14,7 @@
 
 package info
 
-import "github.com/pingcap/kvproto/pkg/pdpb"
+import "gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 
 // StoreStats is to save store stats of node.
 type StoreStats struct {

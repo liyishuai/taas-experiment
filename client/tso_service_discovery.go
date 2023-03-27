@@ -23,7 +23,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/kvproto/pkg/tsopb"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/tsopb"
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/client/errs"
 	"github.com/tikv/pd/client/grpcutil"

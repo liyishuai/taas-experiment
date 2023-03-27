@@ -23,13 +23,13 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/pingcap/kvproto/pkg/keyspacepb"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/tikv/pd/pkg/utils/testutil"
 	"github.com/tikv/pd/server/apiv2/handlers"
 	"github.com/tikv/pd/server/keyspace"
 	"github.com/tikv/pd/tests"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/keyspacepb"
 	"go.uber.org/goleak"
 )
 

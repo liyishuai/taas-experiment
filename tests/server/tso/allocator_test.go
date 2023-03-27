@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pingcap/kvproto/pkg/pdpb"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"github.com/stretchr/testify/require"
 	"github.com/tikv/pd/pkg/slice"
 	"github.com/tikv/pd/pkg/tso"

@@ -19,9 +19,9 @@ import (
 	"strconv"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/pingcap/kvproto/pkg/keyspacepb"
 	"github.com/tikv/pd/pkg/errs"
 	"github.com/tikv/pd/pkg/storage/kv"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/keyspacepb"
 	"go.etcd.io/etcd/clientv3"
 )
 

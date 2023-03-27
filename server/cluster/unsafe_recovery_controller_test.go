@@ -21,7 +21,7 @@ import (
 
 	"github.com/pingcap/kvproto/pkg/eraftpb"
 	"github.com/pingcap/kvproto/pkg/metapb"
-	"github.com/pingcap/kvproto/pkg/pdpb"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"github.com/pingcap/kvproto/pkg/raft_serverpb"
 	"github.com/stretchr/testify/require"
 	"github.com/tikv/pd/pkg/codec"
