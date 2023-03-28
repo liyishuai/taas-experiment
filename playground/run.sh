@@ -18,7 +18,7 @@ function gen_member(){
     for ((i=1; i<=$1; i ++))
     do
         JOIN_PORT=$[ $2 + 10 * $i ]
-        MEMBERS=$MEMBERS"http://${HOST_IP}:${JOIN_PORT}"
+        MEMBERS=$MEMBERS"pd${i}=http://${HOST_IP}:${JOIN_PORT}"
         if ! [ $i == $1 ] ;then
             MEMBERS=$MEMBERS","
         fi
@@ -28,9 +28,11 @@ function gen_member(){
 
 PARA=""
 PARA=$PARA" --client-urls=http://${HOST_IP}:${CLIENT_PORT}"" --peer-urls=http://${HOST_IP}:${PEER_PORT}"
-if ! [ $MYID == 1 ];then
-    PARA=$PARA" --join="$(gen_member $[ $MYID - 1 ] $CLIENT_BASE_PORT)
-fi
+PARA=$PARA" --initial-cluster="$(gen_member $QUORUM_SIZE $PEER_BASE_PORT)
+
+# if ! [ $MYID == 1 ];then
+#     PARA=$PARA" --join="$(gen_member $[ $MYID - 1 ] $CLIENT_BASE_PORT)
+# fi
 echo "PARA: "$PARA
 
 nohup ./pd-server --name="pd$MYID" --data-dir="pd"  --log-file=pd.log $PARA 2>&1 &
