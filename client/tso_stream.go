@@ -139,9 +139,9 @@ func (s *taasTSOStream) processRequests(clusterID uint64, dcLocation string, req
 			ClusterId: clusterID,
 		},
 		Timestamp: &pdpb.Timestamp{
-			Logical:  int64(0),
-			Physical: int64(0),
-			SuffixBits, uint32(0),
+			Logical:    int64(0),
+			Physical:   int64(0),
+			SuffixBits: uint32(0),
 		},
 
 		//Timestamp.Logical:1,
