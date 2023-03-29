@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
+	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/stretchr/testify/require"
 	"github.com/tikv/pd/client/testutil"
 	"github.com/tikv/pd/client/tlsutil"

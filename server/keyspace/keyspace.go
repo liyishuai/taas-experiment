@@ -20,6 +20,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
+	"github.com/pingcap/kvproto/pkg/keyspacepb"
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/pkg/id"
 	"github.com/tikv/pd/pkg/slice"
@@ -28,7 +29,6 @@ import (
 	"github.com/tikv/pd/pkg/utils/syncutil"
 	"github.com/tikv/pd/server/cluster"
 	"github.com/tikv/pd/server/config"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/keyspacepb"
 	"go.uber.org/zap"
 )
 

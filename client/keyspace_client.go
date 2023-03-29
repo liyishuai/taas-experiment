@@ -20,9 +20,9 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/kvproto/pkg/keyspacepb"
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/client/grpcutil"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/keyspacepb"
 	"go.uber.org/zap"
 )
 

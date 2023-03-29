@@ -16,12 +16,13 @@ package pd
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"time"
 
 	"github.com/pingcap/errors"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/tsopb"
+	"github.com/pingcap/kvproto/pkg/pdpb"
+	"github.com/pingcap/kvproto/pkg/tsopb"
 	"github.com/tikv/pd/client/errs"
 	"google.golang.org/grpc"
 )
@@ -48,6 +49,7 @@ func (f *tsoTSOStreamBuilderFactory) makeBuilder(cc *grpc.ClientConn) tsoStreamB
 
 type tsoStreamBuilder interface {
 	build(context.Context, context.CancelFunc, time.Duration) (tsoStream, error)
+	buildTaas(context.Context, context.CancelFunc, time.Duration) (taasStream, error)
 }
 
 type pdTSOStreamBuilder struct {
@@ -65,6 +67,10 @@ func (b *pdTSOStreamBuilder) build(ctx context.Context, cancel context.CancelFun
 	}
 	return nil, err
 }
+func (b *pdTSOStreamBuilder) buildTaas(ctx context.Context, cancel context.CancelFunc, timeout time.Duration) (taasStream, error) {
+	//err=nil
+	return nil, nil
+}
 
 type tsoTSOStreamBuilder struct {
 	client tsopb.TSOClient
@@ -81,7 +87,17 @@ func (b *tsoTSOStreamBuilder) build(ctx context.Context, cancel context.CancelFu
 	}
 	return nil, err
 }
-
+func (b *tsoTSOStreamBuilder) buildTaas(ctx context.Context, cancel context.CancelFunc, timeout time.Duration) (taasStream, error) {
+	done := make(chan struct{})
+	// TODO: we need to handle a conner case that this goroutine is timeout while the stream is successfully created.
+	go checkStreamTimeout(ctx, cancel, done, timeout)
+	stream, err := b.client.Taas(ctx)
+	done <- struct{}{}
+	if err == nil {
+		return &taasTSOStream{stream: stream}, nil
+	}
+	return nil, err
+}
 func checkStreamTimeout(ctx context.Context, cancel context.CancelFunc, done chan struct{}, timeout time.Duration) {
 	select {
 	case <-done:
@@ -99,24 +115,40 @@ type tsoStream interface {
 	// processRequests processes TSO requests in streaming mode to get timestamps
 	processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
 		batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error)
+	//processTaasRequests(clusterID uint64, dcLocation string, requests []*taasRequest,
+	//batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error)
 }
-
+type taasStream interface {
+	processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
+		batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error)
+}
 type pdTSOStream struct {
 	stream pdpb.PD_TsoClient
 }
+type taasTSOStream struct {
+	stream tsopb.TSO_TaasClient
+}
 
-func (s *pdTSOStream) processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
+func (s *taasTSOStream) processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
 	batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error) {
+	fmt.Println("my code run taas request!")
 	start := time.Now()
 	count := int64(len(requests))
-	req := &pdpb.TsoRequest{
-		Header: &pdpb.RequestHeader{
+	req := &tsopb.TaasRequest{
+		Header: &tsopb.RequestHeader{
 			ClusterId: clusterID,
 		},
+		Timestamp: &pdpb.Timestamp{
+			Logical:  int64(0),
+			Physical: int64(0),
+			SuffixBits, uint32(0),
+		},
+
+		//Timestamp.Logical:1,
 		Count:      uint32(count),
 		DcLocation: dcLocation,
 	}
-
+	fmt.Println("my code run Count %d", uint32(count))
 	if err = s.stream.Send(req); err != nil {
 		if err == io.EOF {
 			err = errs.ErrClientTSOStreamClosed
@@ -144,6 +176,60 @@ func (s *pdTSOStream) processRequests(clusterID uint64, dcLocation string, reque
 	}
 
 	physical, logical, suffixBits = resp.GetTimestamp().GetPhysical(), resp.GetTimestamp().GetLogical(), resp.GetTimestamp().GetSuffixBits()
+	//resp.timestamp.physical=5
+	fmt.Println("The one time!!taas!!!request!!!!")
+	fmt.Println(physical)
+	fmt.Println(logical)
+	fmt.Println(suffixBits)
+
+	return
+
+}
+func (s *pdTSOStream) processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
+	batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error) {
+	start := time.Now()
+	count := int64(len(requests))
+	req := &pdpb.TsoRequest{
+		Header: &pdpb.RequestHeader{
+			ClusterId: clusterID,
+		},
+		Count:      uint32(count),
+		DcLocation: dcLocation,
+	}
+	fmt.Println("my code run Count %d", uint32(count))
+	if err = s.stream.Send(req); err != nil {
+		if err == io.EOF {
+			err = errs.ErrClientTSOStreamClosed
+		} else {
+			err = errors.WithStack(err)
+		}
+		return
+	}
+	tsoBatchSendLatency.Observe(float64(time.Since(batchStartTime)))
+	resp, err := s.stream.Recv()
+	if err != nil {
+		if err == io.EOF {
+			err = errs.ErrClientTSOStreamClosed
+		} else {
+			err = errors.WithStack(err)
+		}
+		return
+	}
+	requestDurationTSO.Observe(time.Since(start).Seconds())
+	tsoBatchSize.Observe(float64(count))
+
+	if resp.GetCount() != uint32(count) {
+		err = errors.WithStack(errTSOLength)
+		return
+	}
+
+	physical, logical, suffixBits = resp.GetTimestamp().GetPhysical(), resp.GetTimestamp().GetLogical(), resp.GetTimestamp().GetSuffixBits()
+	//resp.Timestamp.Physical=5
+	fmt.Println("The one time")
+	fmt.Println(physical)
+	fmt.Println(logical)
+	fmt.Println(suffixBits)
+
 	return
 }
 

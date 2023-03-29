@@ -15,7 +15,7 @@
 package operator
 
 import (
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
+	"github.com/pingcap/kvproto/pkg/pdpb"
 )
 
 // OpStatus represents the status of an Operator.

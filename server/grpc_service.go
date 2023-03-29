@@ -26,6 +26,8 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
 	"github.com/pingcap/kvproto/pkg/metapb"
+	"github.com/pingcap/kvproto/pkg/pdpb"
+	"github.com/pingcap/kvproto/pkg/tsopb"
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/pkg/core"
 	"github.com/tikv/pd/pkg/errs"
@@ -38,8 +40,6 @@ import (
 	"github.com/tikv/pd/pkg/utils/tsoutil"
 	"github.com/tikv/pd/pkg/versioninfo"
 	"github.com/tikv/pd/server/cluster"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/tsopb"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -191,7 +191,7 @@ func (s *GrpcServer) GetMembers(context.Context, *pdpb.GetMembersRequest) (*pdpb
 // Tso implements gRPC PDServer.
 func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
 	var (
-		errCh  chan error
+		errCh chan error
 	)
 	_, cancel := context.WithCancel(stream.Context())
 	defer cancel()
@@ -211,7 +211,6 @@ func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-
 
 		start := time.Now()
 		// TSO uses leader lease to determine validity. No need to check leader here.
@@ -239,7 +238,6 @@ func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
 	}
 
 }
-
 
 func (s *GrpcServer) Tso(stream pdpb.PD_TsoServer) error {
 	var (

@@ -20,10 +20,10 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pingcap/kvproto/pkg/keyspacepb"
+	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/tikv/pd/pkg/storage/endpoint"
 	"github.com/tikv/pd/server/keyspace"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/keyspacepb"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"go.etcd.io/etcd/clientv3"
 )
 

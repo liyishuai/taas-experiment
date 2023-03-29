@@ -19,7 +19,7 @@ import (
 	"os"
 	"strings"
 
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/tsopb"
+	"github.com/pingcap/kvproto/pkg/tsopb"
 	"github.com/pingcap/log"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"

@@ -23,11 +23,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/kvproto/pkg/keyspacepb"
 	"github.com/tikv/pd/pkg/errs"
 	"github.com/tikv/pd/server"
 	"github.com/tikv/pd/server/apiv2/middlewares"
 	"github.com/tikv/pd/server/keyspace"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/keyspacepb"
 )
 
 // RegisterKeyspace register keyspace related handlers to router paths.

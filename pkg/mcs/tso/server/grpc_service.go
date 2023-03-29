@@ -21,6 +21,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pingcap/kvproto/pkg/pdpb"
+	"github.com/pingcap/kvproto/pkg/tsopb"
 	"github.com/pingcap/log"
 	"github.com/pkg/errors"
 	bs "github.com/tikv/pd/pkg/basicserver"
@@ -29,8 +31,6 @@ import (
 	"github.com/tikv/pd/pkg/utils/apiutil"
 	"github.com/tikv/pd/pkg/utils/grpcutil"
 	"github.com/tikv/pd/pkg/utils/logutil"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/tsopb"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

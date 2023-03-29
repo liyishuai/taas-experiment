@@ -23,7 +23,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
+	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/pkg/election"
 	"github.com/tikv/pd/pkg/errs"
@@ -34,7 +34,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
-
 
 // TaasTSOAllocator is a global TSO allocator using TaaS algorithm.
 type TaasTSOAllocator struct {
@@ -51,12 +50,12 @@ type TaasTSOAllocator struct {
 }
 
 // NewTaasTSOAllocator creates a new Taas TSO allocator.
-func NewTaasTSOAllocator(	
+func NewTaasTSOAllocator(
 	am *AllocatorManager,
 	leadership *election.Leadership,
 ) Allocator {
 	tta := &TaasTSOAllocator{
-		leadership:       leadership,
+		leadership: leadership,
 		timestampOracle: &timestampOracle{
 			client:                 leadership.GetClient(),
 			rootPath:               am.rootPath,
@@ -227,7 +226,6 @@ func (gta *TaasTSOAllocator) GenerateTSO(count uint32) (pdpb.Timestamp, error) {
 	tsoCounter.WithLabelValues("exceeded_max_retry", gta.timestampOracle.dcLocation).Inc()
 	return pdpb.Timestamp{}, errs.ErrGenerateTimestamp.FastGenByArgs("global tso allocator maximum number of retries exceeded")
 }
-
 
 func (gta *TaasTSOAllocator) precheckLogical(maxTSO *pdpb.Timestamp, suffixBits int) bool {
 	failpoint.Inject("globalTSOOverflow", func() {

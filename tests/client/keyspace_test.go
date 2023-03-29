@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pingcap/kvproto/pkg/keyspacepb"
 	"github.com/stretchr/testify/require"
 	"github.com/tikv/pd/pkg/slice"
 	"github.com/tikv/pd/server"
 	"github.com/tikv/pd/server/keyspace"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/keyspacepb"
 )
 
 const (

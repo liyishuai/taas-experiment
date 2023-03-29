@@ -27,12 +27,12 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
 	"github.com/pingcap/kvproto/pkg/metapb"
+	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/pingcap/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tikv/pd/client/errs"
 	"github.com/tikv/pd/client/grpcutil"
 	"github.com/tikv/pd/client/tlsutil"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -75,7 +75,7 @@ type Client interface {
 	// GetLeaderAddr returns current leader's address. It returns "" before
 	// syncing leader from server.
 	GetLeaderAddr() string
-	TestAsync(ctx context.Context, dcLocation string) (physical int64, logical int64, err error)
+	TaasAsync(ctx context.Context, dcLocation string) (physical int64, logical int64, err error)
 	// GetRegion gets a region and its leader Peer from PD by key.
 	// The region may expire after split. Caller is responsible for caching and
 	// taking care of region change.
@@ -591,7 +591,32 @@ func (c *client) getClient() pdpb.PDClient {
 func (c *client) GetTSAsync(ctx context.Context) TSFuture {
 	return c.GetLocalTSAsync(ctx, globalDCLocation)
 }
+func (c *client) TaasAsync(ctx context.Context, dcLocation string) (physical int64, logical int64, err error) {
+	fmt.Println("TEST")
+	//req := c.GetLocalTSAsync(ctx, globalDCLocation)
+	tsoClient := c.getTSOClient()
+	conn, url := tsoClient.GetTSOAllocatorClientConnByDCLocation(dcLocation) // 得到3个
+	req := tsoReqPool.Get().(*tsoRequest)
+	req.requestCtx = ctx
+	req.clientCtx = c.ctx
+	//req.Timestamp.Logical=500
+	//req.Timestamp.LL=50
 
+	fmt.Println(conn)
+	fmt.Println(url)
+	/*if err := tsoClient.dispatchRequest(dcLocation, req); err != nil {
+		// Wait for a while and try again
+		time.Sleep(50 * time.Millisecond)
+		if err = tsoClient.dispatchRequest(dcLocation, req); err != nil {
+			req.done <- err
+		}
+	}
+	return req
+	*/
+	return 0, 0, nil
+	//return req.Wait()
+	//return {}
+}
 func (c *client) GetLocalTSAsync(ctx context.Context, dcLocation string) TSFuture {
 	if span := opentracing.SpanFromContext(ctx); span != nil {
 		span = opentracing.StartSpan("GetLocalTSAsync", opentracing.ChildOf(span.Context()))
@@ -631,12 +656,7 @@ func (c *client) GetLocalTS(ctx context.Context, dcLocation string) (physical in
 	resp := c.GetLocalTSAsync(ctx, dcLocation)
 	return resp.Wait()
 }
-func (c *client) TestAsync(ctx context.Context, dcLocation string) (physical int64, logical int64, err error) {
-	fmt.Println("TEST")
-	req := c.GetLocalTSAsync(ctx, globalDCLocation)
-	return req.Wait()
-	//return {}
-}
+
 func handleRegionResponse(res *pdpb.GetRegionResponse) *Region {
 	if res.Region == nil {
 		return nil

@@ -25,11 +25,11 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
+	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/client/errs"
 	"github.com/tikv/pd/client/grpcutil"
 	"github.com/tikv/pd/client/tlsutil"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -332,7 +332,13 @@ func (c *pdServiceDiscovery) SetTSOGlobalServAddrUpdatedCallback(callback tsoGlo
 	if len(addr) > 0 {
 		callback(addr)
 	}
-	c.tsoGlobalAllocLeaderUpdatedCb = callback
+	/*addrlist:=c.getFollowerAddrs()
+	    for ip:=range addrlist{
+	        callback(ip)
+		}
+		c.tsoGlobalAllocLeaderUpdatedCb = callback
+		zelu
+	*/
 }
 
 // getLeaderAddr returns the leader address.
@@ -421,7 +427,7 @@ func (c *pdServiceDiscovery) updateMember() error {
 			log.Info("zghtag", zap.String("updateMember", fmt.Sprintf("%s", members.GetLeader().GetDcLocation())))
 			allMembers := members.GetMembers()
 			allMemberClientUrls := ""
-			for _, member := range(allMembers) {
+			for _, member := range allMembers {
 				allMemberClientUrls += member.GetClientUrls()[0]
 			}
 			log.Info("zghtag", zap.String("allMemberClientUrls", allMemberClientUrls))

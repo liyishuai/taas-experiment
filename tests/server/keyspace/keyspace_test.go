@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pingcap/kvproto/pkg/keyspacepb"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/tikv/pd/pkg/codec"
@@ -31,7 +32,6 @@ import (
 	"github.com/tikv/pd/server/config"
 	"github.com/tikv/pd/server/keyspace"
 	"github.com/tikv/pd/tests"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/keyspacepb"
 )
 
 type keyspaceTestSuite struct {

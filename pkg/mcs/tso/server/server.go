@@ -33,7 +33,7 @@ import (
 
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pingcap/kvproto/pkg/diagnosticspb"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/tsopb"
+	"github.com/pingcap/kvproto/pkg/tsopb"
 	"github.com/pingcap/log"
 	"github.com/pingcap/sysutil"
 	"github.com/soheilhy/cmux"
