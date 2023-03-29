@@ -12,5 +12,4 @@ require (
 )
 
 replace github.com/tikv/pd/client => ../../client
-// replace github.com/pingcap/kvproto => gitlab.alibaba-inc.com/zelu.wjz/taasplugin v0.0.0-20230329094122-cf023a782115
 replace github.com/pingcap/kvproto => ../../taas-proto/taasplugin/
