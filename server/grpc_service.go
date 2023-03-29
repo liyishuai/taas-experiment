@@ -190,9 +190,57 @@ func (s *GrpcServer) GetMembers(context.Context, *pdpb.GetMembersRequest) (*pdpb
 
 // Tso implements gRPC PDServer.
 func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
-	fmt.Println("taas")
-	return nil
+	var (
+		errCh  chan error
+	)
+	_, cancel := context.WithCancel(stream.Context())
+	defer cancel()
+	for {
+		// Prevent unnecessary performance overhead of the channel.
+		if errCh != nil {
+			select {
+			case err := <-errCh:
+				return errors.WithStack(err)
+			default:
+			}
+		}
+		request, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+
+		start := time.Now()
+		// TSO uses leader lease to determine validity. No need to check leader here.
+		if s.IsClosed() {
+			return status.Errorf(codes.Unknown, "server not started")
+		}
+		if request.GetHeader().GetClusterId() != s.clusterID {
+			return status.Errorf(codes.FailedPrecondition, "mismatch cluster id, need %d but got %d", s.clusterID, request.GetHeader().GetClusterId())
+		}
+		count := request.GetCount()
+		log.Info("zghtag", zap.String("request", fmt.Sprintf("%T", request)))
+		ts, err := s.taasAllocatorManager.HandleTSORequest(request.GetDcLocation(), count)
+		if err != nil {
+			return status.Errorf(codes.Unknown, err.Error())
+		}
+		tsoHandleDuration.Observe(time.Since(start).Seconds())
+		response := &pdpb.TsoResponse{
+			Header:    s.header(),
+			Timestamp: &ts,
+			Count:     count,
+		}
+		if err := stream.Send(response); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
 }
+
+
 func (s *GrpcServer) Tso(stream pdpb.PD_TsoServer) error {
 	var (
 		doneCh chan struct{}

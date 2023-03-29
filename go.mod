@@ -55,12 +55,7 @@ require (
 	gotest.tools/gotestsum v1.7.0
 )
 
-require (
-	github.com/benbjohnson/clock v1.1.0 // indirect
-	github.com/influxdata/tdigest v0.0.1 // indirect
-	github.com/opentracing/opentracing-go v1.2.0 // indirect
-	github.com/tikv/pd/client v0.0.0-20230327080844-fa18b03821ad // indirect
-)
+require github.com/benbjohnson/clock v1.1.0 // indirect
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect

@@ -16,6 +16,7 @@ package pd
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sort"
 	"sync"
@@ -24,11 +25,11 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/client/errs"
 	"github.com/tikv/pd/client/grpcutil"
 	"github.com/tikv/pd/client/tlsutil"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -416,7 +417,20 @@ func (c *pdServiceDiscovery) updateMember() error {
 				err = errs.ErrClientGetLeader.FastGenByArgs("leader address don't exist")
 			}
 			// Still need to update TsoAllocatorLeaders, even if there is no PD leader
-			errTSO = c.switchTSOAllocatorLeaders(members.GetTsoAllocatorLeaders())
+			// Add taas client urls to members
+			log.Info("zghtag", zap.String("updateMember", fmt.Sprintf("%s", members.GetLeader().GetDcLocation())))
+			allMembers := members.GetMembers()
+			allMemberClientUrls := ""
+			for _, member := range(allMembers) {
+				allMemberClientUrls += member.GetClientUrls()[0]
+			}
+			log.Info("zghtag", zap.String("allMemberClientUrls", allMemberClientUrls))
+			allocatorsWithTaaS := members.GetTsoAllocatorLeaders()
+			if allocatorsWithTaaS == nil {
+				allocatorsWithTaaS = make(map[string]*pdpb.Member)
+			}
+			allocatorsWithTaaS["taas"] = members.GetLeader()
+			errTSO = c.switchTSOAllocatorLeaders(allocatorsWithTaaS)
 		}
 
 		// Failed to get members
@@ -546,6 +560,7 @@ func (c *pdServiceDiscovery) updateFollowers(members []*pdpb.Member, leader *pdp
 }
 
 func (c *pdServiceDiscovery) switchTSOAllocatorLeaders(allocatorMap map[string]*pdpb.Member) error {
+	log.Info("zghtag", zap.String("switchTSOAllocatorLeaders", fmt.Sprintf("%d", len(allocatorMap))))
 	if len(allocatorMap) == 0 {
 		return nil
 	}
@@ -553,6 +568,7 @@ func (c *pdServiceDiscovery) switchTSOAllocatorLeaders(allocatorMap map[string]*
 	allocMap := make(map[string]string)
 	// Switch to the new one
 	for dcLocation, member := range allocatorMap {
+		log.Info("zghtag", zap.String("switchTSOAllocatorLeaders", dcLocation))
 		if len(member.GetClientUrls()) == 0 {
 			continue
 		}

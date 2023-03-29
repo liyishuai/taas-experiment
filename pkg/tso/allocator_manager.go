@@ -26,7 +26,6 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
-	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/pkg/election"
 	"github.com/tikv/pd/pkg/errs"
@@ -37,6 +36,7 @@ import (
 	"github.com/tikv/pd/pkg/utils/grpcutil"
 	"github.com/tikv/pd/pkg/utils/logutil"
 	"github.com/tikv/pd/pkg/utils/syncutil"
+	"gitlab.alibaba-inc.com/zelu.wjz/taasplugin/pkg/pdpb"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -45,6 +45,7 @@ import (
 const (
 	// GlobalDCLocation is the Global TSO Allocator's DC location label.
 	GlobalDCLocation            = "global"
+	TaaSLocation                = "taas"
 	checkStep                   = time.Minute
 	patrolStep                  = time.Second
 	defaultAllocatorLeaderLease = 3
@@ -361,6 +362,8 @@ func (am *AllocatorManager) SetUpAllocator(parentCtx context.Context, dcLocation
 	var allocator Allocator
 	if dcLocation == GlobalDCLocation {
 		allocator = NewGlobalTSOAllocator(am, leadership)
+	} else if dcLocation == TaaSLocation {
+		allocator = NewTaasTSOAllocator(am, leadership)
 	} else {
 		allocator = NewLocalTSOAllocator(am, leadership, dcLocation)
 	}
@@ -378,10 +381,14 @@ func (am *AllocatorManager) SetUpAllocator(parentCtx context.Context, dcLocation
 	// will happen in server.campaignLeader().
 	if dcLocation == GlobalDCLocation {
 		return
+	} else if dcLocation == TaaSLocation {
+		taasTSOAllocator, _ := allocator.(*TaasTSOAllocator)
+		go am.allocatorLeaderlessLoop(parentCtx, taasTSOAllocator)
+	} else {
+		// Start election of the Local TSO Allocator here
+		localTSOAllocator, _ := allocator.(*LocalTSOAllocator)
+		go am.allocatorLeaderLoop(parentCtx, localTSOAllocator)
 	}
-	// Start election of the Local TSO Allocator here
-	localTSOAllocator, _ := allocator.(*LocalTSOAllocator)
-	go am.allocatorLeaderLoop(parentCtx, localTSOAllocator)
 }
 
 func (am *AllocatorManager) getAllocatorPath(dcLocation string) string {
@@ -396,6 +403,20 @@ func (am *AllocatorManager) getAllocatorPath(dcLocation string) string {
 // with other system key paths such as leader, member, alloc_id, raft, etc.
 func (am *AllocatorManager) getLocalTSOAllocatorPath() string {
 	return path.Join(am.rootPath, localTSOAllocatorEtcdPrefix)
+}
+
+// loop for taas allocator
+func (am *AllocatorManager) allocatorLeaderlessLoop(ctx context.Context, allocator *TaasTSOAllocator) {
+	defer logutil.LogPanic()
+	defer log.Info("server is closed, return local tso allocator leader loop",
+		zap.String("taas-tso-allocator-name", am.member.Name()))
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+	}
 }
 
 // similar logic with leaderLoop in server/server.go
@@ -1026,6 +1047,7 @@ func (am *AllocatorManager) getAllocatorGroups(filters ...AllocatorGroupFilter) 
 }
 
 func (am *AllocatorManager) getAllocatorGroup(dcLocation string) (*allocatorGroup, bool) {
+	log.Info("zghtag", zap.String("dcLocation", dcLocation))
 	am.mu.RLock()
 	defer am.mu.RUnlock()
 	allocatorGroup, exist := am.mu.allocatorGroups[dcLocation]

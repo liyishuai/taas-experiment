@@ -112,6 +112,7 @@ func (c *tsoClient) updateTSODispatcher() {
 	// Set up the new TSO dispatcher and batch controller.
 	c.GetTSOAllocators().Range(func(dcLocationKey, _ interface{}) bool {
 		dcLocation := dcLocationKey.(string)
+		log.Info("zghtag", zap.String("tsoClientCreate", dcLocation))
 		if !c.checkTSODispatcher(dcLocation) {
 			c.createTSODispatcher(dcLocation)
 		}
@@ -121,7 +122,8 @@ func (c *tsoClient) updateTSODispatcher() {
 	c.tsoDispatcher.Range(func(dcLocationKey, dispatcher interface{}) bool {
 		dcLocation := dcLocationKey.(string)
 		// Skip the Global TSO Allocator
-		if dcLocation == globalDCLocation {
+		// TODO4zgh: add enum for taas
+		if dcLocation == globalDCLocation || dcLocation == "taas" {
 			return true
 		}
 		if _, exist := c.GetTSOAllocators().Load(dcLocation); !exist {

@@ -167,6 +167,8 @@ type Server struct {
 	basicCluster *core.BasicCluster
 	// for tso.
 	tsoAllocatorManager *tso.AllocatorManager
+	// for taas
+	taasAllocatorManager *tso.AllocatorManager
 	// for raft cluster
 	cluster *cluster.RaftCluster
 	// For async region heartbeat.
@@ -400,6 +402,14 @@ func (s *Server) startServer(ctx context.Context) error {
 			func() time.Duration { return s.persistOptions.GetMaxResetTSGap() })
 		// Set up the Global TSO Allocator here, it will be initialized once the PD campaigns leader successfully.
 		s.tsoAllocatorManager.SetUpAllocator(ctx, tso.GlobalDCLocation, s.member.GetLeadership())
+
+		// For taas TODO4zgh: add specific cfgs for taas
+		s.taasAllocatorManager = tso.NewAllocatorManager(
+			s.member, s.rootPath, s.storage, s.cfg.IsLocalTSOEnabled(), s.cfg.GetTSOSaveInterval(), s.cfg.GetTSOUpdatePhysicalInterval(), s.cfg.GetTLSConfig(),
+			func() time.Duration { return s.persistOptions.GetMaxResetTSGap() })
+		// Set up the Global TSO Allocator here, it will be initialized once the PD campaigns leader successfully.
+		s.taasAllocatorManager.SetUpAllocator(ctx, tso.TaaSLocation, s.member.GetLeadership())
+
 		// When disabled the Local TSO, we should clean up the Local TSO Allocator's meta info written in etcd if it exists.
 		if !s.cfg.EnableLocalTSO {
 			if err = s.tsoAllocatorManager.CleanUpDCLocation(); err != nil {
@@ -805,6 +815,11 @@ func (s *Server) GetHBStreams() *hbstream.HeartbeatStreams {
 // GetAllocator returns the ID allocator of server.
 func (s *Server) GetAllocator() id.Allocator {
 	return s.idAllocator
+}
+
+// GetTaaSAllocatorManager returns the manager of TSO Allocator.
+func (s *Server) GetTaasAllocatorManager() *tso.AllocatorManager {
+	return s.taasAllocatorManager
 }
 
 // GetTSOAllocatorManager returns the manager of TSO Allocator.
