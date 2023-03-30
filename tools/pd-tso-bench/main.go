@@ -110,11 +110,13 @@ func bench(mainCtx context.Context) {
 	}
 
 	ctx, cancel := context.WithCancel(mainCtx)
-	errorlist:=[]string{"http://11.158.168.215:6020","http://11.158.168.215:6030","http://11.158.168.215:6010"}
+	// errorlist:=[]string{"http://11.158.168.215:6020","http://11.158.168.215:6030","http://11.158.168.215:6010"}
+
+	errorlist := []string{"http://11.158.168.215:3020", "http://11.158.168.215:3030", "http://11.158.168.215:3010"}
 	// To avoid the first time high latency.
 	for idx, pdCli := range pdClients {
 		//_, _, err := pdCli.GetLocalTS(ctx, *dcLocation)
-		_, _, err := pdCli.TaasAsync(ctx, *dcLocation,errorlist)
+		_, _, err := pdCli.TaasAsync(ctx, *dcLocation, errorlist, 1)
 		if err != nil {
 			log.Fatal("get first time tso failed", zap.Int("client-number", idx), zap.Error(err))
 		}
@@ -345,7 +347,7 @@ func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration) {
 
 	reqCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	errorlist:=[]string{"http://11.158.168.215:6020","http://11.158.168.215:6030","http://11.158.168.215:6010"}
+	errorlist := []string{"http://11.158.168.215:3020", "http://11.158.168.215:3030", "http://11.158.168.215:3010"}
 	for {
 		start := time.Now()
 
@@ -357,7 +359,7 @@ func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration) {
 		)
 		for ; i < maxRetryTime; i++ {
 
-			_, _, err := pdCli.TaasAsync(ctx, *dcLocation,errorlist)
+			_, _, err := pdCli.TaasAsync(ctx, *dcLocation, errorlist, 1)
 			//_, _, err = pdCli.GetLocalTS(reqCtx, *dcLocation)
 			if errors.Cause(err) == context.Canceled {
 				return
