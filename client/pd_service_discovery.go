@@ -278,7 +278,7 @@ func (c *pdServiceDiscovery) GetServingEndpointClientConn() *grpc.ClientConn {
 
 // GetClientConns returns the mapping {addr -> a gRPC connection}
 func (c *pdServiceDiscovery) GetClientConns() *sync.Map {
-	fmt.Println("xixi")
+	//fmt.Println("xixi")
 	return &c.clientConns
 }
 
@@ -596,8 +596,8 @@ func (c *pdServiceDiscovery) switchTSOAllocatorLeaders(allocatorMap map[string]*
 
 // GetOrCreateGRPCConn returns the corresponding grpc client connection of the given addr
 func (c *pdServiceDiscovery) GetOrCreateGRPCConn(addr string) (*grpc.ClientConn, error) {
-	//fmt.Println("run pd GetOrCreateGRPCConn")
-	//fmt.Println(addr)
+	////fmt.Println("run pd GetOrCreateGRPCConn")
+	////fmt.Println(addr)
 	// hack change
 	needlist := []string{"http://11.158.168.215:3010", "http://11.158.168.215:3020", "http://11.158.168.215:3030"}
 	for i := 0; i < len(needlist); i++ {

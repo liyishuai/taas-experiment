@@ -168,23 +168,23 @@ func (c *tsoClient) GetTSOAllocatorServingAddrByDCLocation(dcLocation string) (s
 // of the given dcLocation
 func (c *tsoClient) GetTSOAllocatorClientConnByDCLocation(dcLocation string) (*grpc.ClientConn, string) {
 	url, ok := c.tsoAllocators.Load(dcLocation)
-	fmt.Println("ctsoallocatiors load")
-	fmt.Println(url)
+	//fmt.Println("ctsoallocatiors load")
+	//fmt.Println(url)
 	if !ok {
 		panic(fmt.Sprintf("the allocator leader in %s should exist", dcLocation))
 	}
-	fmt.Println("everybody  test")
-	urltmp, ok := c.svcDiscovery.GetClientConns().Load("http://11.158.168.215:3020")
+	//fmt.Println("everybody  test")
+	/*urltmp, ok := c.svcDiscovery.GetClientConns().Load("http://11.158.168.215:3020")
 	if !ok {
-		fmt.Println("!!!3020eeeeeeeee")
+		//fmt.Println("!!!3020eeeeeeeee")
 	}
-	fmt.Println(urltmp)
+	//fmt.Println(urltmp)
 	urltmp, ok = c.svcDiscovery.GetClientConns().Load("http://11.158.168.215:3030")
 	if !ok {
-		fmt.Println("!!!3020eeeee")
+		//fmt.Println("!!!3020eeeee")
 	}
-	fmt.Println(urltmp)
-
+	//fmt.Println(urltmp)
+    */
 	cc, ok := c.svcDiscovery.GetClientConns().Load(url)
 	if !ok {
 		panic(fmt.Sprintf("the client connection of %s in %s should exist", url, dcLocation))

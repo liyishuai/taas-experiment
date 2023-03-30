@@ -16,7 +16,7 @@ package pd
 
 import (
 	"context"
-	"fmt"
+	//"fmt"
 	"io"
 	"time"
 
@@ -79,7 +79,7 @@ func (b *pdTSOStreamBuilder) buildTaas(ctx context.Context, cancel context.Cance
 	return nil, err
 	return nil,nil
 	
-	fmt.Println("run my pdTSOStreamBuilder!!!!!!!")
+	//fmt.Println("run my pdTSOStreamBuilder!!!!!!!")
 	return nil,nil
 }
 type tsoTSOStreamBuilder struct {
@@ -102,9 +102,9 @@ func (b *tsoTSOStreamBuilder) buildTaas(ctx context.Context, cancel context.Canc
 	// TODO: we need to handle a conner case that this goroutine is timeout while the stream is successfully created.
 	go checkStreamTimeout(ctx, cancel, done, timeout)
 	stream, err := b.client.Taas(ctx)
-	//fmt.Println(type(stream))
+	////fmt.Println(type(stream))
 	done <- struct{}{}
-    fmt.Println("run my tso tsoTSOStreamBuilder ")
+    //fmt.Println("run my tso tsoTSOStreamBuilder ")
 	if err == nil {
 		return &taasTSOStream{stream: stream}, nil
 	}
@@ -148,12 +148,12 @@ type taasTSOStream struct {
 }
 func (s *taasTSOStream) processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
 	batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error) {
-   fmt.Println("pdTaasStream ")
+   //fmt.Println("pdTaasStream ")
    return 0,0,0,nil
 }
 func (s *pdTaasStream) processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
 	batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error) {
-	fmt.Println("my code run taas request!")
+	//fmt.Println("my code run taas request!")
 		start := time.Now()
 		count := int64(len(requests))
 		req := &pdpb.TaasRequest{
@@ -171,7 +171,7 @@ func (s *pdTaasStream) processRequests(clusterID uint64, dcLocation string, requ
 			Count:      uint32(count),
 			DcLocation: dcLocation,
 		}
-		fmt.Println("my code run Count pdpb %d", uint32(count))
+		//fmt.Println("my code run Count pdpb %d", uint32(count))
 		if err = s.stream.Send(req); err != nil {
 			if err == io.EOF {
 				err = errs.ErrClientTSOStreamClosed
@@ -200,10 +200,10 @@ func (s *pdTaasStream) processRequests(clusterID uint64, dcLocation string, requ
 	
 		physical, logical, suffixBits = resp.GetTimestamp().GetPhysical(), resp.GetTimestamp().GetLogical(), resp.GetTimestamp().GetSuffixBits()
 		//resp.timestamp.physical=5
-		fmt.Println("The one time!!taas!!!request!!!!")
-		fmt.Println(physical)
-		fmt.Println(logical)
-		fmt.Println(suffixBits)
+		//fmt.Println("The one time!!taas!!!request!!!!")
+		//fmt.Println(physical)
+		//fmt.Println(logical)
+		//fmt.Println(suffixBits)
 	
 		return
 
@@ -219,7 +219,7 @@ func (s *pdTSOStream) processRequests(clusterID uint64, dcLocation string, reque
 		Count:      uint32(count),
 		DcLocation: dcLocation,
 	}
-	fmt.Println("my code run Count pd pdtsosstream %d", uint32(count))
+	//fmt.Println("my code run Count pd pdtsosstream %d", uint32(count))
 	if err = s.stream.Send(req); err != nil {
 		if err == io.EOF {
 			err = errs.ErrClientTSOStreamClosed
@@ -248,10 +248,10 @@ func (s *pdTSOStream) processRequests(clusterID uint64, dcLocation string, reque
 
 	physical, logical, suffixBits = resp.GetTimestamp().GetPhysical(), resp.GetTimestamp().GetLogical(), resp.GetTimestamp().GetSuffixBits()
 	//resp.Timestamp.Physical=5
-	fmt.Println("The one time")
-	fmt.Println(physical)
-	fmt.Println(logical)
-	fmt.Println(suffixBits)
+	//fmt.Println("The one time")
+	//fmt.Println(physical)
+	//fmt.Println(logical)
+	//fmt.Println(suffixBits)
 
 	return
 }

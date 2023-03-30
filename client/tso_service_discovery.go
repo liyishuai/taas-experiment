@@ -188,7 +188,7 @@ func (c *tsoServiceDiscovery) GetServingEndpointClientConn() *grpc.ClientConn {
 
 // GetClientConns returns the mapping {addr -> a gRPC connectio}
 func (c *tsoServiceDiscovery) GetClientConns() *sync.Map {
-	fmt.Println("tgege")
+	//fmt.Println("tgege")
 	return &c.clientConns
 }
 
@@ -207,8 +207,8 @@ func (c *tsoServiceDiscovery) GetBackupAddrs() []string {
 
 // GetOrCreateGRPCConn returns the corresponding grpc client connection of the given addr.
 func (c *tsoServiceDiscovery) GetOrCreateGRPCConn(addr string) (*grpc.ClientConn, error) {
-	fmt.Println("heihei ,get the GetOrCreateGRPCConn")
-	fmt.Println(addr)
+	//fmt.Println("heihei ,get the GetOrCreateGRPCConn")
+	//fmt.Println(addr)
 	return grpcutil.GetOrCreateGRPCConn(c.ctx, &c.clientConns, addr, c.tlsCfg, c.option.gRPCDialOptions...)
 }
 
