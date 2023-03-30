@@ -30,17 +30,12 @@ import (
 type TSOStorage interface {
 	LoadTimestamp(prefix string) (time.Time, error)
 	SaveTimestamp(key string, ts time.Time) error
-}
-
-var _ TSOStorage = (*StorageEndpoint)(nil)
-
-type TaasStorage interface {
 	LoadTaasTimestamp(prefix string) (int64, error)
 	SaveTaasTimestamp(key string, ts int64) error
 }
 
 // for Taas timestamp interface check
-var _ TaasStorage = (*StorageEndpoint)(nil)
+var _ TSOStorage = (*StorageEndpoint)(nil)
 
 // LoadTimestamp will get all time windows of Local/Global TSOs from etcd and return the biggest one.
 // For the Global TSO, loadTimestamp will get all Local and Global TSO time windows persisted in etcd and choose the biggest one.
@@ -97,7 +92,7 @@ func (se *StorageEndpoint) SaveTimestamp(key string, ts time.Time) error {
 	})
 }
 
-func (se *StorageEndpoint) LoadTaaSTimestamp(prefix string) (int64, error) {
+func (se *StorageEndpoint) LoadTaasTimestamp(prefix string) (int64, error) {
 	prefixEnd := clientv3.GetPrefixRangeEnd(prefix)
 	keys, values, err := se.LoadRange(prefix, prefixEnd, 0)
 	if err != nil {
@@ -114,7 +109,7 @@ func (se *StorageEndpoint) LoadTaaSTimestamp(prefix string) (int64, error) {
 		}
 		ts, err := typeutil.BytesToUint64([]byte(values[i]))
 		if err != nil {
-			log.Error("parse timestamp window that from etcd failed", zap.String("ts-window-key", key), zap.Time("max-ts-window", maxTSWindow), zap.Error(err))
+			log.Error("parse timestamp window that from etcd failed", zap.String("ts-window-key", key), zap.Error(err))
 			continue
 		}
 		if ts > maxTs{
