@@ -52,6 +52,14 @@ var (
 	wg                     sync.WaitGroup
 )
 
+const (
+	globalDCLocation = "global"
+	taasDCLocation   = "taas"
+)
+
+var (
+	errorlist = []string{"http://11.158.168.215:6020", "http://11.158.168.215:6030", "http://11.158.168.215:6010"}
+)
 var promServer *httptest.Server
 
 func collectMetrics(server *httptest.Server) string {
@@ -110,22 +118,20 @@ func bench(mainCtx context.Context) {
 	}
 
 	ctx, cancel := context.WithCancel(mainCtx)
-	// errorlist:=[]string{"http://11.158.168.215:6020","http://11.158.168.215:6030","http://11.158.168.215:6010"}
-
-	errorlist := []string{"http://11.158.168.215:3020", "http://11.158.168.215:3030", "http://11.158.168.215:3010"}
 	// To avoid the first time high latency.
 	for idx, pdCli := range pdClients {
-		//_, _, err := pdCli.GetLocalTS(ctx, *dcLocation)
-		for i := 0; i < len(errorlist); i++ {
-			err := pdCli.InitTaas(errorlist[i])
+		if *dcLocation == taasDCLocation {
+			_, _, err := pdCli.TaasAsync(ctx, *dcLocation, errorlist, 1)
 			if err != nil {
-				fmt.Println("!!")
+				log.Fatal("get first taas tso failed", zap.Int("client-number", idx), zap.Error(err))
+			}
+		} else {
+			_, _, err := pdCli.GetLocalTS(ctx, *dcLocation)
+			if err != nil {
+				log.Fatal("get first time tso failed", zap.Int("client-number", idx), zap.Error(err))
 			}
 		}
-		_, _, err := pdCli.TaasAsync(ctx, *dcLocation, errorlist, 1)
-		if err != nil {
-			log.Fatal("get first time tso failed", zap.Int("client-number", idx), zap.Error(err))
-		}
+
 	}
 
 	durCh := make(chan time.Duration, 2*(*concurrency)*(*clientNumber))
@@ -353,7 +359,7 @@ func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration) {
 
 	reqCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	errorlist := []string{"http://11.158.168.215:3020", "http://11.158.168.215:3030", "http://11.158.168.215:3010"}
+
 	for {
 		start := time.Now()
 
@@ -364,9 +370,13 @@ func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration) {
 			sleepIntervalOnFailure time.Duration = 100 * time.Millisecond
 		)
 		for ; i < maxRetryTime; i++ {
+			err = error(nil)
+			if *dcLocation == taasDCLocation {
+				_, _, err = pdCli.TaasAsync(ctx, *dcLocation, errorlist, 1)
 
-			_, _, err := pdCli.TaasAsync(ctx, *dcLocation, errorlist, 1)
-			//_, _, err = pdCli.GetLocalTS(reqCtx, *dcLocation)
+			} else {
+				_, _, err = pdCli.GetLocalTS(reqCtx, *dcLocation)
+			}
 			if errors.Cause(err) == context.Canceled {
 				return
 			}

@@ -291,7 +291,14 @@ cl:
 	cd playground; for	((i=1;i<=$(QUORUM_SIZE); i++)); do rm -rf p$$i; done;
 	for	((i=1;i<=$(QUORUM_SIZE); i++)); do pkill -of 'pd-server --name=pd$$i'; sleep 1; done;
 
-bench: pd-tso-bench
-	./bin/pd-tso-bench  -client 10 -c 10 -duration 5s -pd $(LOCAL_IP):3010  -v  > tso_bench.log 2>&1 &
+taas: pd-tso-bench
+	./bin/pd-tso-bench  -client 5 -c 5 -duration 5s -pd $(LOCAL_IP):6010  -v -dc taas
 
-.PHONY: pd bench cl
+global: pd-tso-bench
+	./bin/pd-tso-bench  -client 5 -c 5 -duration 5s -pd $(LOCAL_IP):6010  -v
+
+
+limit:
+	# curl -L http://`hostname -i`:6010/v3/kv/range -X POST -d '{"key": "dHRhCg=="}'
+
+.PHONY: pd bench cl limit

@@ -438,12 +438,14 @@ func (c *pdServiceDiscovery) updateMember() error {
 			if allocatorsWithTaaS == nil {
 				allocatorsWithTaaS = make(map[string]*pdpb.Member)
 			}
+			/*
 			allocatorsWithTaaS["taas"] = &pdpb.Member{
 				Name:       taasMemberName,
 				MemberId:   taasMemberId,
 				ClientUrls: allMemberClientUrls,
 				DcLocation: taasDCLocation,
 			}
+			*/
 			errTSO = c.switchTSOAllocatorLeaders(allocatorsWithTaaS)
 		}
 

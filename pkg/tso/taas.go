@@ -16,7 +16,6 @@ package tso
 
 import (
 	"path"
-	"sync/atomic"
 	"time"
 
 	"github.com/pingcap/kvproto/pkg/pdpb"
@@ -49,8 +48,6 @@ type taasNode struct {
 	maxResetTSGap          func() time.Duration
 	// tso info stored in the memory
 	taasMux *taasObject
-	// last timestamp window stored in etcd
-	lastSavedTime atomic.Value // stored as time.Time
 	dcLocation    string
 }
 
@@ -70,6 +67,15 @@ func (t *taasNode) setTaasLow(syncTs int64) {
 	defer t.taasMux.Unlock()
 	t.taasMux.tsLow = syncTs
 }
+
+func (t *taasNode) setTaasLimit(syncTs int64) {
+	t.taasMux.Lock()
+	defer t.taasMux.Unlock()
+	if t.taasMux.tsLimit < syncTs {
+		t.taasMux.tsLimit = syncTs
+	}
+}
+
 func (t *taasNode) getTSO() (pdpb.Timestamp, error) {
 	t.taasMux.RLock()
 	defer t.taasMux.RUnlock()
@@ -85,18 +91,19 @@ func (t *taasNode) getTSO() (pdpb.Timestamp, error) {
 func (t *taasNode) generateTSO(count uint32) (pdpb.Timestamp, error) {
 	t.taasMux.Lock()
 	defer t.taasMux.Unlock()
-	log.Info("zghtag", zap.Int64("taas generate tso", t.taasMux.tsHigh))
+	// log.Info("zghtag", zap.Int64("taas generate tso", t.taasMux.tsHigh))
 
 	newTaasLevel := t.taasMux.tsHigh + int64(count)
-	if newTaasLevel > t.taasMux.tsLimit - taasLimitWarningLevel {
+	if newTaasLevel + taasLimitWarningLevel > t.taasMux.tsLimit  {
+		log.Info("TaasTag", zap.Int64("taas high", t.taasMux.tsHigh), zap.Int64("taas limit", t.taasMux.tsLimit))
 		t.UpdateTaasLimit(newTaasLevel + taasLimitUpdateLevel)
 	}
+	t.taasMux.tsHigh = newTaasLevel
 	timestamp := &pdpb.Timestamp{
 		Physical:   t.taasMux.tsHigh,
 		Logical:    t.taasMux.tsLow,
 		SuffixBits: 0,
 	}
-	t.taasMux.tsHigh = newTaasLevel
 	return *timestamp, nil
 }
 
@@ -114,10 +121,17 @@ func (t *taasNode) SyncTimestamp() error {
 	t.taasMux.Lock()
 	defer t.taasMux.Unlock()
 
-	log.Info("sync and save timestamp", zap.Int64("last", last))
+	log.Info("sync and save taas timestamp", zap.Int64("last", last))
 	// save into memory
-	t.setTaasHigh(last)
 	t.UpdateTaasLimit(last + taasLimitUpdateLevel)
+	t.setTaasHigh(last)
+	confirmedLimit, err := t.storage.LoadTaasTimestamp(t.getTimestampPath())
+	if err != nil {
+		return err
+	}
+	if confirmedLimit > t.taasMux.tsLimit {
+		t.taasMux.tsLimit = confirmedLimit
+	}
 	return nil
 }
 
@@ -138,7 +152,7 @@ func (t *taasNode) isInitialized() bool {
 
 func (t *taasNode) UpdateTaasLimit(newLimit int64) error {
 	if err := t.storage.SaveTaasTimestamp(t.getTimestampPath(), newLimit); err != nil {
-		log.Error("TaasTag: update taas limit failed")
+		log.Error("TaasTag: update taas limit failed", zap.Error(err))
 		return err
 	}
 	return nil

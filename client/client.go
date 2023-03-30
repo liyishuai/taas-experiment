@@ -290,7 +290,7 @@ type client struct {
 	wg        sync.WaitGroup
 	tlsCfg    *tlsutil.TLSConfig
 	option    *option
-	taasMap   map[string]TaasStream
+	taasMap   map[string]tsoStream
 	clusterid uint64
 }
 
@@ -358,7 +358,7 @@ func (c *client) setup() error {
 	//fmt.Println("the client run set up once!!!!!!!!!!!")
 
 	c.Cache = make(map[string]Result)
-	c.taasMap = make(map[string]TaasStream)
+	c.taasMap = make(map[string]tsoStream)
 	// Init the client base.
 	if err := c.pdSvcDiscovery.Init(); err != nil {
 		return err
@@ -604,23 +604,6 @@ func (c *client) GetTSAsync(ctx context.Context) TSFuture {
 	return c.GetLocalTSAsync(ctx, globalDCLocation)
 }
 
-/*
-	func (c *client) SimpleSend(url string)(int64,int64,err) {
-			tsoClient := c.getTSOClient()
-			conn, url := tsoClient.GetTSOAllocatorClientConnByDCLocation(dcLocation) // 得到3个
-			req := tsoReqPool.Get().(*tsoRequest)
-			req.requestCtx = ctx
-			req.clientCtx = c.ctx
-			req.keyspaceID = 3
-
-
-			// dedaoliu
-			// TaasStream, err = c.TsoStreamBuilderFactory.makeBuilder(cc).buildTaas(cctx, cancel, c.option.timeout)
-			//err = tsoClient.processTAASRequests(stream, dc, tbc, opts)
-		physical, logical, suffixBits, err := stream.processRequests(c.svcDiscovery.GetClusterID(), dcLocation, requests, tbc.batchStartTime)
-
-}
-*/
 type Result struct {
 	High int64
 	Low  int64
@@ -646,8 +629,6 @@ func (c *client) TaasAsync(ctx context.Context, dcLocation string, urllist []str
 	var rlist []Result
 	tempResult := Result{High: -1, Low: -1}
 	for i := 0; i < len(urllist); i++ {
-		//fmt.Println("run url")
-		//fmt.Println(urllist[i])
 		phy, log, err := c.TassSend(ctx, dcLocation, urllist[i], tempResult)
 		//fmt.Println("ji")
 		//duration := t2.Sub(t1)
@@ -656,17 +637,11 @@ func (c *client) TaasAsync(ctx context.Context, dcLocation string, urllist []str
 			errorlist = append(errorlist, urllist[i])
 			continue
 		} else {
-			//fmt.Println(phy)
-			//fmt.Println(log)
-			//fmt.Println(err)
 			c.Mutex.Lock()
 			c.Cache[urllist[i]] = Result{High: phy, Low: log}
+			rlist = append(rlist, Result{High: phy, Low: log})
 			c.Mutex.Unlock()
 		}
-	}
-
-	for _, value := range c.Cache {
-		rlist = append(rlist, value)
 	}
 
 	return 0, 0, nil
@@ -687,15 +662,10 @@ func (c *client) TaasAsync(ctx context.Context, dcLocation string, urllist []str
 }
 
 func (c *client) TassSend(ctx context.Context, dcLocation string, url string, sync Result) (physical int64, logical int64, err error) {
-	/*t1 := time.Now()
-	//fmt.Println("TEST")
-	//fmt.Println(url)
 	tsoClient := c.getTSOClient()
 	conn, err := c.pdSvcDiscovery.GetOrCreateGRPCConn(url)
 	cctx, cancel := context.WithCancel(context.Background())
-	//timeout:=c.option.timeout
-	TaasStream, err := tsoClient.TsoStreamBuilderFactory.makeBuilder(conn).buildTaas(cctx, cancel, c.option.timeout)
-	*/
+	taasStream, err := tsoClient.TsoStreamBuilderFactory.makeBuilder(conn).buildTaas(cctx, cancel, c.option.timeout)
 	req := tsoReqPool.Get().(*tsoRequest)
 	if sync.High != -1 {
 		req.physical = sync.High
@@ -706,38 +676,12 @@ func (c *client) TassSend(ctx context.Context, dcLocation string, url string, sy
 	req.dcLocation = dcLocation
 	req.keyspaceID = 3
 	batchStartTime := time.Now()
-	//mil := batchStartTime.Sub(t1)
-	//fmt.Println("step 1", mil.Microseconds())
-	//fmt.Println(mil.Milliseconds())
-	//fmt.Println(batchStartTime.Second())
-	//fmt.Println("batchstarttime")
-	//fmt.Println(batchStartTime)
-	kk := []*tsoRequest{req}
-	//fmt.Println("taasstrea")
 
-	p, s, _, r := c.taasMap[url].processRequests(c.clusterid, dcLocation, kk, batchStartTime)
-	//p, s, _, r = TaasStream.processRequests(tsoClient.svcDiscovery.GetClusterID(), dcLocation, kk, batchStartTime)
-	//t3 := time.Now()
-	//mil2 := t3.Sub(batchStartTime)
-	//fmt.Println("step 2", mil2.Microseconds())
-	//fmt.Println(mil2.Microseconds())
-	//p, s, _, r = taasMap[url].sprocessRequests(tsoClient.svcDiscovery.GetClusterID(), dcLocation, kk, batchStartTime)
-
-	//fmt.Println("result!!!!")
-	//fmt.Println(p)
-	//fmt.Println(s)
-	//fmt.Println(r)
-	/*if err := tsoClient.dispatchRequest(dcLocation, req); err != nil {
-		// Wait for a while and try again
-		time.Sleep(50 * time.Millisecond)
-		if err = tsoClient.dispatchRequest(dcLocation, req); err != nil {
-			req.done <- err
-		}
-	}
-	return req
-	*/
+	tTsoRequest := []*tsoRequest{req}
+	p, s, _, r := taasStream.processRequests(tsoClient.svcDiscovery.GetClusterID(), dcLocation, tTsoRequest, batchStartTime)
 	return p, s, r
 }
+
 func (c *client) GetLocalTSAsync(ctx context.Context, dcLocation string) TSFuture {
 	if span := opentracing.SpanFromContext(ctx); span != nil {
 		span = opentracing.StartSpan("GetLocalTSAsync", opentracing.ChildOf(span.Context()))

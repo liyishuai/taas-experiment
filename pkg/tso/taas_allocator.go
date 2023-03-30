@@ -45,7 +45,11 @@ func NewTaasTSOAllocator(
 			updatePhysicalInterval: am.updatePhysicalInterval,
 			maxResetTSGap:          am.maxResetTSGap,
 			dcLocation:             TaaSLocation,
-			taasMux:                &taasObject{},
+			taasMux:                &taasObject{
+				tsHigh: 	0,
+				tsLow:		int64(am.member.ID()),
+				tsLimit:	taasLimitUpdateLevel,
+			},
 		},
 	}
 	return tta

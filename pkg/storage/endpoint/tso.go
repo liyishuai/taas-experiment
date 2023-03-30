@@ -135,7 +135,8 @@ func (se *StorageEndpoint) SaveTaasTimestamp(key string, ts int64) error {
 				return err
 			}
 		}
-		if int64(previousTS) >= ts {
+		if int64(previousTS) > ts {
+			log.Info("TaasTag: previous ts > current limit", zap.Int64("previousTS", int64(previousTS)), zap.Int64("cur", ts))
 			return nil
 		}
 		data := typeutil.Uint64ToBytes(uint64(ts))
