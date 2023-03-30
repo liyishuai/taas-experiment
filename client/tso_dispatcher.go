@@ -67,7 +67,7 @@ func (c *tsoClient) scheduleUpdateTSOConnectionCtxs() {
 
 func (c *tsoClient) dispatchRequest(dcLocation string, request *tsoRequest) error {
 	dispatcher, ok := c.tsoDispatcher.Load(dcLocation)
-	log.Info("zghtag", zap.String("client dispatchRequest", dcLocation))
+	//log.Info("zghtag", zap.String("client dispatchRequest", dcLocation))
 	if !ok {
 		err := errs.ErrClientGetTSO.FastGenByArgs(fmt.Sprintf("unknown dc-location %s to the client", dcLocation))
 		log.Error("[tso] dispatch tso request error", zap.String("dc-location", dcLocation), errs.ZapError(err))
@@ -113,7 +113,7 @@ func (c *tsoClient) updateTSODispatcher() {
 	// Set up the new TSO dispatcher and batch controller.
 	c.GetTSOAllocators().Range(func(dcLocationKey, _ interface{}) bool {
 		dcLocation := dcLocationKey.(string)
-		log.Info("zghtag", zap.String("tsoClientCreate", dcLocation))
+		//log.Info("zghtag", zap.String("tsoClientCreate", dcLocation))
 		if !c.checkTSODispatcher(dcLocation) {
 			c.createTSODispatcher(dcLocation)
 		}
@@ -248,14 +248,14 @@ func (c *tsoClient) checkAllocator(
 			// create a stream of the original allocator
 			cctx, cancel := context.WithCancel(dispatcherCtx)
 			stream, err := c.TsoStreamBuilderFactory.makeBuilder(cc).build(cctx, cancel, c.option.timeout)
-			taasStream, err := c.TsoStreamBuilderFactory.makeBuilder(cc).buildTaas(cctx, cancel, c.option.timeout)
+			TaasStream, err := c.TsoStreamBuilderFactory.makeBuilder(cc).buildTaas(cctx, cancel, c.option.timeout)
 			if err != nil {
 				//fmt.Println("tass failed!! 250")
 			}
-			//fmt.Println(taasStream)
+			//fmt.Println(TaasStream)
 			if err == nil && stream != nil {
 				log.Info("[tso] recover the original tso stream since the network has become normal", zap.String("dc", dc), zap.String("url", url))
-				updateAndClear(url, &tsoConnectionContext{url, stream, taasStream, cctx, cancel})
+				updateAndClear(url, &tsoConnectionContext{url, stream, TaasStream, cctx, cancel})
 				return
 			}
 		}
@@ -327,8 +327,8 @@ func (c *tsoClient) handleDispatcher(
 	// Call updateTSOConnectionCtxs once to init the connectionCtxs first.
 	c.updateTSOConnectionCtxs(dispatcherCtx, dc, &connectionCtxs)
 	connectemp := c.chooseStream(&connectionCtxs)
-	if connectemp.taasStream == nil {
-		//fmt.Println("error the taasStream is error")
+	if connectemp.TaasStream == nil {
+		//fmt.Println("error the TaasStream is error")
 	}
 	// Only the Global TSO needs to watch the updateTSOConnectionCtxsCh to sense the
 	// change of the cluster when TSO Follower Proxy is enabled.
@@ -402,7 +402,7 @@ tsoBatchLoop:
 			// if dc == taasDCLocation {
 			// 	connectionCtxs.Range(func(_, cc interface{}) bool {
 			// 		connectionCtx := cc.(*tsoConnectionContext)
-			// 		streamAddr, stream, streamCtx, cancel = connectionCtx.streamAddr, connectionCtx.taasStream, connectionCtx.ctx, connectionCtx.cancel
+			// 		streamAddr, stream, streamCtx, cancel = connectionCtx.streamAddr, connectionCtx.TaasStream, connectionCtx.ctx, connectionCtx.cancel
 
 			// 		return true
 			// 	})
@@ -410,8 +410,8 @@ tsoBatchLoop:
 
 			connectionCtx := c.chooseStream(&connectionCtxs)
 			if connectionCtx != nil {
-				// streamAddr, stream, streamCtx, cancel = connectionCtx.streamAddr, connectionCtx.stream, connectionCtx.ctx, connectionCtx.cancel
-				streamAddr, stream, streamCtx, cancel = connectionCtx.streamAddr, connectionCtx.taasStream, connectionCtx.ctx, connectionCtx.cancel
+				streamAddr, stream, streamCtx, cancel = connectionCtx.streamAddr, connectionCtx.stream, connectionCtx.ctx, connectionCtx.cancel
+				//streamAddr, stream, streamCtx, cancel = connectionCtx.streamAddr, connectionCtx.TaasStream, connectionCtx.ctx, connectionCtx.cancel
 			}
 			// Check stream and retry if necessary.
 			if stream == nil {
@@ -462,8 +462,8 @@ tsoBatchLoop:
 		case tsDeadlineCh.(chan deadline) <- dl:
 		}
 		opts = extractSpanReference(tbc, opts[:0])
-		//err = c.processTSORequests(stream, dc, tbc, opts)
-		err = c.processTAASRequests(stream, dc, tbc, opts)
+		err = c.processTSORequests(stream, dc, tbc, opts)
+		//err = c.processTAASRequests(stream, dc, tbc, opts)
 		close(done)
 		// If error happens during tso stream handling, reset stream and run the next trial.
 		if err != nil {
@@ -524,7 +524,7 @@ type tsoConnectionContext struct {
 	// Current stream to send gRPC requests, pdpb.PD_TsoClient for a leader/follower in the PD cluser,
 	// or tsopb.TSO_TsoClient for a primary/secondary in the TSO clusrer
 	stream     tsoStream
-	taasStream taasStream
+	TaasStream TaasStream
 	ctx        context.Context
 	cancel     context.CancelFunc
 }
@@ -561,7 +561,7 @@ func (c *tsoClient) tryConnectToTSO(
 		stream        tsoStream
 		url           string
 		cc            *grpc.ClientConn
-		taasStream    taasStream
+		TaasStream    TaasStream
 	)
 	updateAndClear := func(newAddr string, connectionCtx *tsoConnectionContext) {
 		if cc, loaded := connectionCtxs.LoadOrStore(newAddr, connectionCtx); loaded {
@@ -587,19 +587,19 @@ func (c *tsoClient) tryConnectToTSO(
 		//fmt.Println(dc)
 		cctx, cancel := context.WithCancel(dispatcherCtx)
 		stream, err = c.TsoStreamBuilderFactory.makeBuilder(cc).build(cctx, cancel, c.option.timeout)
-		taasStream, err = c.TsoStreamBuilderFactory.makeBuilder(cc).buildTaas(cctx, cancel, c.option.timeout)
-		if taasStream == nil {
+		TaasStream, err = c.TsoStreamBuilderFactory.makeBuilder(cc).buildTaas(cctx, cancel, c.option.timeout)
+		if TaasStream == nil {
 
 			//fmt.Println("taas get error 579")
 		}
 		//fmt.Println()
-		//fmt.Println(taasStream)
+		//fmt.Println(TaasStream)
 		failpoint.Inject("unreachableNetwork", func() {
 			stream = nil
 			err = status.New(codes.Unavailable, "unavailable").Err()
 		})
 		if stream != nil && err == nil {
-			updateAndClear(url, &tsoConnectionContext{url, stream, taasStream, cctx, cancel})
+			updateAndClear(url, &tsoConnectionContext{url, stream, TaasStream, cctx, cancel})
 			return nil
 		}
 
@@ -636,18 +636,18 @@ func (c *tsoClient) tryConnectToTSO(
 			cctx, cancel := context.WithCancel(dispatcherCtx)
 			cctx = grpcutil.BuildForwardContext(cctx, forwardedHost)
 			stream, err = c.TsoStreamBuilderFactory.makeBuilder(backupClientConn).build(cctx, cancel, c.option.timeout)
-			taasStream, err = c.TsoStreamBuilderFactory.makeBuilder(backupClientConn).buildTaas(cctx, cancel, c.option.timeout)
-			if err != nil || taasStream == nil {
+			TaasStream, err = c.TsoStreamBuilderFactory.makeBuilder(backupClientConn).buildTaas(cctx, cancel, c.option.timeout)
+			if err != nil || TaasStream == nil {
 				//fmt.Println("tass failed!! 620")
 			}
-			//fmt.Println(taasStream)
+			//fmt.Println(TaasStream)
 			if err == nil {
 				forwardedHostTrim := trimHTTPPrefix(forwardedHost)
 				addrTrim := trimHTTPPrefix(addr)
 				// the goroutine is used to check the network and change back to the original stream
 				go c.checkAllocator(dispatcherCtx, cancel, dc, forwardedHostTrim, addrTrim, url, updateAndClear)
 				requestForwarded.WithLabelValues(forwardedHostTrim, addrTrim).Set(1)
-				updateAndClear(addr, &tsoConnectionContext{addr, stream, taasStream, cctx, cancel})
+				updateAndClear(addr, &tsoConnectionContext{addr, stream, TaasStream, cctx, cancel})
 				return nil
 			}
 			cancel()
@@ -701,7 +701,7 @@ func (c *tsoClient) tryConnectToTSOWithProxy(dispatcherCtx context.Context, dc s
 	})
 	// Update the missing one.
 	for addr, tsoStreamBuilder := range tsoStreamBuilders {
-		log.Info("zghtag", zap.String("tsoStreamBuilder", addr))
+		//log.Info("zghtag", zap.String("tsoStreamBuilder", addr))
 		if _, ok = connectionCtxs.Load(addr); ok {
 			continue
 		}
@@ -713,7 +713,7 @@ func (c *tsoClient) tryConnectToTSOWithProxy(dispatcherCtx context.Context, dc s
 		}
 		// Create the TSO stream.
 		stream, err1 := tsoStreamBuilder.build(cctx, cancel, c.option.timeout)
-		taasStream, err2 := tsoStreamBuilder.buildTaas(cctx, cancel, c.option.timeout)
+		TaasStream, err2 := tsoStreamBuilder.buildTaas(cctx, cancel, c.option.timeout)
 		if err2 != nil {
 			log.Error("[taas] use follower to create taas stream failed", zap.String("dc", dc), zap.String("addr", addr))
 		}
@@ -723,7 +723,7 @@ func (c *tsoClient) tryConnectToTSOWithProxy(dispatcherCtx context.Context, dc s
 				addrTrim := trimHTTPPrefix(addr)
 				requestForwarded.WithLabelValues(forwardedHostTrim, addrTrim).Set(1)
 			}
-			connectionCtxs.Store(addr, &tsoConnectionContext{addr, stream, taasStream, cctx, cancel})
+			connectionCtxs.Store(addr, &tsoConnectionContext{addr, stream, TaasStream, cctx, cancel})
 			continue
 		}
 		log.Error("[tso] create the tso stream failed", zap.String("dc", dc), zap.String("addr", addr), errs.ZapError(err1))
@@ -760,7 +760,7 @@ func (c *tsoClient) processTSORequests(stream tsoStream, dcLocation string, tbc 
 	c.finishTSORequest(requests, physical, firstLogical, suffixBits, nil)
 	return nil
 }
-func (c *tsoClient) processTAASRequests(stream taasStream, dcLocation string, tbc *tsoBatchController, opts []opentracing.StartSpanOption) error {
+func (c *tsoClient) processTAASRequests(stream TaasStream, dcLocation string, tbc *tsoBatchController, opts []opentracing.StartSpanOption) error {
 	if len(opts) > 0 {
 		span := opentracing.StartSpan("pdclient.processTSORequests", opts...)
 		defer span.Finish()

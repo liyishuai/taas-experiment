@@ -116,6 +116,12 @@ func bench(mainCtx context.Context) {
 	// To avoid the first time high latency.
 	for idx, pdCli := range pdClients {
 		//_, _, err := pdCli.GetLocalTS(ctx, *dcLocation)
+		for i := 0; i < len(errorlist); i++ {
+			err := pdCli.InitTaas(errorlist[i])
+			if err != nil {
+				fmt.Println("!!")
+			}
+		}
 		_, _, err := pdCli.TaasAsync(ctx, *dcLocation, errorlist, 1)
 		if err != nil {
 			log.Fatal("get first time tso failed", zap.Int("client-number", idx), zap.Error(err))
