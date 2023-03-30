@@ -85,6 +85,7 @@ func (t *taasNode) getTSO() (pdpb.Timestamp, error) {
 func (t *taasNode) generateTSO(count uint32) (pdpb.Timestamp, error) {
 	t.taasMux.Lock()
 	defer t.taasMux.Unlock()
+	log.Info("zghtag", zap.Int64("taas generate tso", t.taasMux.tsHigh))
 
 	newTaasLevel := t.taasMux.tsHigh + int64(count)
 	if newTaasLevel > t.taasMux.tsLimit - taasLimitWarningLevel {
@@ -95,6 +96,7 @@ func (t *taasNode) generateTSO(count uint32) (pdpb.Timestamp, error) {
 		Logical:    t.taasMux.tsLow,
 		SuffixBits: 0,
 	}
+	t.taasMux.tsHigh = newTaasLevel
 	return *timestamp, nil
 }
 
@@ -135,9 +137,6 @@ func (t *taasNode) isInitialized() bool {
 
 
 func (t *taasNode) UpdateTaasLimit(newLimit int64) error {
-	t.taasMux.Lock()
-	defer t.taasMux.Unlock()
-
 	if err := t.storage.SaveTaasTimestamp(t.getTimestampPath(), newLimit); err != nil {
 		log.Error("TaasTag: update taas limit failed")
 		return err
