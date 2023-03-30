@@ -70,7 +70,7 @@ type tsoClient struct {
 
 	keyspaceID   uint32
 	svcDiscovery ServiceDiscovery
-	tsoStreamBuilderFactory
+	TsoStreamBuilderFactory
 	// tsoAllocators defines the mapping {dc-location -> TSO allocator leader URL}
 	tsoAllocators sync.Map // Store as map[string]string
 	// tsoAllocServingAddrSwitchedCallback will be called when any global/local
@@ -93,7 +93,7 @@ type tsoClient struct {
 // newTSOClient returns a new TSO client.
 func newTSOClient(
 	ctx context.Context, option *option, keyspaceID uint32,
-	svcDiscovery ServiceDiscovery, factory tsoStreamBuilderFactory,
+	svcDiscovery ServiceDiscovery, factory TsoStreamBuilderFactory,
 ) *tsoClient {
 	ctx, cancel := context.WithCancel(ctx)
 	c := &tsoClient{
@@ -102,7 +102,7 @@ func newTSOClient(
 		option:                    option,
 		keyspaceID:                keyspaceID,
 		svcDiscovery:              svcDiscovery,
-		tsoStreamBuilderFactory:   factory,
+		TsoStreamBuilderFactory:   factory,
 		checkTSDeadlineCh:         make(chan struct{}),
 		checkTSODispatcherCh:      make(chan struct{}, 1),
 		updateTSOConnectionCtxsCh: make(chan struct{}, 1),
@@ -168,9 +168,23 @@ func (c *tsoClient) GetTSOAllocatorServingAddrByDCLocation(dcLocation string) (s
 // of the given dcLocation
 func (c *tsoClient) GetTSOAllocatorClientConnByDCLocation(dcLocation string) (*grpc.ClientConn, string) {
 	url, ok := c.tsoAllocators.Load(dcLocation)
+	fmt.Println("ctsoallocatiors load")
+	fmt.Println(url)
 	if !ok {
 		panic(fmt.Sprintf("the allocator leader in %s should exist", dcLocation))
 	}
+	fmt.Println("everybody  test")
+	urltmp, ok := c.svcDiscovery.GetClientConns().Load("http://11.158.168.215:3020")
+	if !ok {
+		fmt.Println("!!!3020eeeeeeeee")
+	}
+	fmt.Println(urltmp)
+	urltmp, ok = c.svcDiscovery.GetClientConns().Load("http://11.158.168.215:3030")
+	if !ok {
+		fmt.Println("!!!3020eeeee")
+	}
+	fmt.Println(urltmp)
+
 	cc, ok := c.svcDiscovery.GetClientConns().Load(url)
 	if !ok {
 		panic(fmt.Sprintf("the client connection of %s in %s should exist", url, dcLocation))

@@ -29,7 +29,7 @@ import (
 
 // TSO Stream Builder Factory
 
-type tsoStreamBuilderFactory interface {
+type TsoStreamBuilderFactory interface {
 	makeBuilder(cc *grpc.ClientConn) tsoStreamBuilder
 }
 
@@ -140,7 +140,7 @@ type taasStream interface{
 type pdTSOStream struct {
 	stream pdpb.PD_TsoClient
 }
-type pdTaasStream struct{
+type pdTaasStream struct {
 	stream pdpb.PD_TaasClient
 }
 type taasTSOStream struct {

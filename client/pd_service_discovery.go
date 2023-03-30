@@ -278,6 +278,7 @@ func (c *pdServiceDiscovery) GetServingEndpointClientConn() *grpc.ClientConn {
 
 // GetClientConns returns the mapping {addr -> a gRPC connection}
 func (c *pdServiceDiscovery) GetClientConns() *sync.Map {
+	fmt.Println("xixi")
 	return &c.clientConns
 }
 
@@ -428,7 +429,9 @@ func (c *pdServiceDiscovery) updateMember() error {
 			allMembers := members.GetMembers()
 			allMemberClientUrls := ""
 			for _, member := range allMembers {
+
 				allMemberClientUrls += member.GetClientUrls()[0]
+				allMemberClientUrls += ","
 			}
 			log.Info("zghtag", zap.String("allMemberClientUrls", allMemberClientUrls))
 			allocatorsWithTaaS := members.GetTsoAllocatorLeaders()
@@ -593,5 +596,12 @@ func (c *pdServiceDiscovery) switchTSOAllocatorLeaders(allocatorMap map[string]*
 
 // GetOrCreateGRPCConn returns the corresponding grpc client connection of the given addr
 func (c *pdServiceDiscovery) GetOrCreateGRPCConn(addr string) (*grpc.ClientConn, error) {
+	//fmt.Println("run pd GetOrCreateGRPCConn")
+	//fmt.Println(addr)
+	// hack change
+	needlist := []string{"http://11.158.168.215:3010", "http://11.158.168.215:3020", "http://11.158.168.215:3030"}
+	for i := 0; i < len(needlist); i++ {
+		grpcutil.GetOrCreateGRPCConn(c.ctx, &c.clientConns, needlist[i], c.tlsCfg, c.option.gRPCDialOptions...)
+	}
 	return grpcutil.GetOrCreateGRPCConn(c.ctx, &c.clientConns, addr, c.tlsCfg, c.option.gRPCDialOptions...)
 }

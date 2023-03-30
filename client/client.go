@@ -75,7 +75,8 @@ type Client interface {
 	// GetLeaderAddr returns current leader's address. It returns "" before
 	// syncing leader from server.
 	GetLeaderAddr() string
-	TaasAsync(ctx context.Context, dcLocation string) (physical int64, logical int64, err error)
+	TaasAsync(ctx context.Context, dcLocation string,urllist []string) (physical int64, logical int64, err error)
+	TassSend(ctx context.Context, dcLocation string, url string) (physical int64, logical int64, err error)
 	// GetRegion gets a region and its leader Peer from PD by key.
 	// The region may expire after split. Caller is responsible for caching and
 	// taking care of region change.
@@ -591,19 +592,102 @@ func (c *client) getClient() pdpb.PDClient {
 func (c *client) GetTSAsync(ctx context.Context) TSFuture {
 	return c.GetLocalTSAsync(ctx, globalDCLocation)
 }
-func (c *client) TaasAsync(ctx context.Context, dcLocation string) (physical int64, logical int64, err error) {
+
+/*
+	func (c *client) SimpleSend(url string)(int64,int64,err) {
+			tsoClient := c.getTSOClient()
+			conn, url := tsoClient.GetTSOAllocatorClientConnByDCLocation(dcLocation) // 得到3个
+			req := tsoReqPool.Get().(*tsoRequest)
+			req.requestCtx = ctx
+			req.clientCtx = c.ctx
+			req.keyspaceID = 3
+
+
+			// dedaoliu
+			// taasStream, err = c.TsoStreamBuilderFactory.makeBuilder(cc).buildTaas(cctx, cancel, c.option.timeout)
+			//err = tsoClient.processTAASRequests(stream, dc, tbc, opts)
+		physical, logical, suffixBits, err := stream.processRequests(c.svcDiscovery.GetClusterID(), dcLocation, requests, tbc.batchStartTime)
+
+}
+*/
+type Result struct{
+	High int64
+	Low int64
+}
+var Cache []Result
+func (c *client) TaasAsync(ctx context.Context, dcLocation string,urllist []string) (physical int64, logical int64, err error) {
+	//var data [7]int64
+	var errorlist []string
+	//var rlist []Result
+	for i:=0;i<len(urllist);i++{
+		fmt.Println("run url")
+		fmt.Println(urllist[i])
+		phy,log,err:=c.TassSend(ctx,dcLocation,urllist[i])
+		if err!=nil{
+           errorlist=append(errorlist,urllist[i])
+		}
+		//rlist=relist.append(Result{High:phy,Low,log})
+		fmt.Println(phy)
+		fmt.Println(log)
+		fmt.Println(err)
+	}
+	sort.Slice(rlist,func(i,j Result)bool{
+		if rlist[i].High==rlist[j].High{
+		   return rlist[i].Low<rlist[j].Low
+		}
+		return rlist[i].High<rlist[j].High
+	})
+	
+
+
+	
+	
+	/*data[1], data[2], err = c.TassSend(ctx, dcLocation, "http://11.158.168.215:3020")
+	if err != nil {
+		fmt.Println("error 1")
+	}
+	data[3], data[4], err = c.TassSend(ctx, dcLocation, "http://11.158.168.215:3010")
+	if err != nil {
+		fmt.Println("error 2")
+	}
+	data[5], data[6], err = c.TassSend(ctx, dcLocation, "http://11.158.168.215:3030")
+	if err != nil {
+		fmt.Println("error 3")
+	}
+	for i := 0; i < 7; i++ {
+		fmt.Println(data[i])
+	}*/
+	return 0, 0, nil
+}
+
+func (c *client) TassSend(ctx context.Context, dcLocation string, url string) (physical int64, logical int64, err error) {
 	fmt.Println("TEST")
-	//req := c.GetLocalTSAsync(ctx, globalDCLocation)
+	fmt.Println(url)
 	tsoClient := c.getTSOClient()
-	conn, url := tsoClient.GetTSOAllocatorClientConnByDCLocation(dcLocation) // 得到3个
+	conn, err := c.pdSvcDiscovery.GetOrCreateGRPCConn(url)
+	cctx, cancel := context.WithCancel(context.Background())
+	//timeout:=c.option.timeout
+	taasStream, err := tsoClient.TsoStreamBuilderFactory.makeBuilder(conn).buildTaas(cctx, cancel, c.option.timeout)
 	req := tsoReqPool.Get().(*tsoRequest)
 	req.requestCtx = ctx
 	req.clientCtx = c.ctx
+	req.dcLocation = dcLocation
+	req.keyspaceID = 3
+	batchStartTime := time.Now()
+	fmt.Println("batchstarttime")
+	fmt.Println(batchStartTime)
+	kk := []*tsoRequest{req}
+	p, s, _, r := taasStream.processRequests(tsoClient.svcDiscovery.GetClusterID(), dcLocation, kk, batchStartTime)
+	fmt.Println("result!!!!")
+	fmt.Println(p)
+	fmt.Println(s)
+	fmt.Println(r)
+	//err = tsoClient.processTAASRequests(stream, dc, tbc, opts)
 	//req.Timestamp.Logical=500
 	//req.Timestamp.LL=50
 
-	fmt.Println(conn)
-	fmt.Println(url)
+	//fmt.Println(conn)
+	//fmt.Println(url)
 	/*if err := tsoClient.dispatchRequest(dcLocation, req); err != nil {
 		// Wait for a while and try again
 		time.Sleep(50 * time.Millisecond)

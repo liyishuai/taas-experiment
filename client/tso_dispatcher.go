@@ -246,8 +246,8 @@ func (c *tsoClient) checkAllocator(
 		if err == nil && resp.GetStatus() == healthpb.HealthCheckResponse_SERVING {
 			// create a stream of the original allocator
 			cctx, cancel := context.WithCancel(dispatcherCtx)
-			stream, err := c.tsoStreamBuilderFactory.makeBuilder(cc).build(cctx, cancel, c.option.timeout)
-			taasStream, err := c.tsoStreamBuilderFactory.makeBuilder(cc).buildTaas(cctx, cancel, c.option.timeout)
+			stream, err := c.TsoStreamBuilderFactory.makeBuilder(cc).build(cctx, cancel, c.option.timeout)
+			taasStream, err := c.TsoStreamBuilderFactory.makeBuilder(cc).buildTaas(cctx, cancel, c.option.timeout)
 			if err != nil {
 				fmt.Println("tass failed!! 250")
 			}
@@ -580,9 +580,12 @@ func (c *tsoClient) tryConnectToTSO(
 	for i := 0; i < maxRetryTimes; i++ {
 		c.svcDiscovery.ScheduleCheckMemberChanged()
 		cc, url = c.GetTSOAllocatorClientConnByDCLocation(dc)
+		fmt.Println("now url wjzhhhh")
+		fmt.Println(url)
+		fmt.Println(dc)
 		cctx, cancel := context.WithCancel(dispatcherCtx)
-		stream, err = c.tsoStreamBuilderFactory.makeBuilder(cc).build(cctx, cancel, c.option.timeout)
-		taasStream, err = c.tsoStreamBuilderFactory.makeBuilder(cc).buildTaas(cctx, cancel, c.option.timeout)
+		stream, err = c.TsoStreamBuilderFactory.makeBuilder(cc).build(cctx, cancel, c.option.timeout)
+		taasStream, err = c.TsoStreamBuilderFactory.makeBuilder(cc).buildTaas(cctx, cancel, c.option.timeout)
 		if taasStream == nil {
 
 			fmt.Println("taas get error 579")
@@ -630,8 +633,8 @@ func (c *tsoClient) tryConnectToTSO(
 			// create the follower stream
 			cctx, cancel := context.WithCancel(dispatcherCtx)
 			cctx = grpcutil.BuildForwardContext(cctx, forwardedHost)
-			stream, err = c.tsoStreamBuilderFactory.makeBuilder(backupClientConn).build(cctx, cancel, c.option.timeout)
-			taasStream, err = c.tsoStreamBuilderFactory.makeBuilder(backupClientConn).buildTaas(cctx, cancel, c.option.timeout)
+			stream, err = c.TsoStreamBuilderFactory.makeBuilder(backupClientConn).build(cctx, cancel, c.option.timeout)
+			taasStream, err = c.TsoStreamBuilderFactory.makeBuilder(backupClientConn).buildTaas(cctx, cancel, c.option.timeout)
 			if err != nil || taasStream == nil {
 				fmt.Println("tass failed!! 620")
 			}
@@ -671,7 +674,7 @@ func (c *tsoClient) getAllTSOStreamBuilders() map[string]tsoStreamBuilder {
 		resp, err := healthpb.NewHealthClient(cc).Check(healthCtx, &healthpb.HealthCheckRequest{Service: ""})
 		healthCancel()
 		if err == nil && resp.GetStatus() == healthpb.HealthCheckResponse_SERVING {
-			streamBuilders[addr] = c.tsoStreamBuilderFactory.makeBuilder(cc)
+			streamBuilders[addr] = c.TsoStreamBuilderFactory.makeBuilder(cc)
 		}
 	}
 	return streamBuilders
