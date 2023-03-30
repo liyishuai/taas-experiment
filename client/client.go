@@ -148,6 +148,7 @@ type Client interface {
 	KeyspaceClient
 	// ResourceManagerClient manages resource group metadata and token assignment.
 	ResourceManagerClient
+
 	// Close closes the client.
 	Close()
 }
@@ -277,7 +278,8 @@ type client struct {
 
 	// For service mode switching.
 	serviceModeKeeper
-
+	Cache map[string]Result
+	Mutex sync.Mutex
 	// For internal usage.
 	updateTokenConnectionCh chan struct{}
 	leaderNetworkFailure    int32
@@ -350,7 +352,7 @@ func NewClientWithKeyspace(ctx context.Context, keyspaceID uint32, svrAddrs []st
 }
 
 func (c *client) setup() error {
-	Cache = make(map[string]Result)
+	c.Cache = make(map[string]Result)
 	// Init the client base.
 	if err := c.pdSvcDiscovery.Init(); err != nil {
 		return err
@@ -617,7 +619,7 @@ type Result struct {
 	Low  int64
 }
 
-var Cache map[string]Result
+//var Cache map[string]Result
 
 func (c *client) TaasAsync(ctx context.Context, dcLocation string, urllist []string, M int32) (physical int64, logical int64, err error) {
 	var errorlist []string
@@ -625,26 +627,33 @@ func (c *client) TaasAsync(ctx context.Context, dcLocation string, urllist []str
 	tempResult := Result{High: -1, Low: -1}
 	for i := 0; i < len(urllist); i++ {
 		//fmt.Println("run url")
-		fmt.Println(urllist[i])
+		//fmt.Println(urllist[i])
 		phy, log, err := c.TassSend(ctx, dcLocation, urllist[i], tempResult)
 		if err != nil {
 			errorlist = append(errorlist, urllist[i])
 			continue
 		} else {
-
-			Cache[urllist[i]] = Result{High: phy, Low: log}
+			//fmt.Println(phy)
+			//fmt.Println(log)
+			//fmt.Println(err)
+			c.Mutex.Lock()
+			c.Cache[urllist[i]] = Result{High: phy, Low: log}
+			c.Mutex.Unlock()
 		}
 	}
-	for _, value := range Cache {
+
+	for _, value := range c.Cache {
 		rlist = append(rlist, value)
 	}
+
+	return 0, 0, nil
 	sort.Slice(rlist, func(i, j int) bool {
 		if rlist[i].High == rlist[j].High {
 			return rlist[i].Low < rlist[j].Low
 		}
 		return rlist[i].High < rlist[j].High
 	})
-	syncvalue := rlist[M]
+	syncvalue := rlist[0]
 	if len(errorlist) != 0 {
 		for i := 0; i < len(errorlist); i++ {
 			c.TassSend(ctx, dcLocation, urllist[i], syncvalue)
@@ -672,14 +681,16 @@ func (c *client) TassSend(ctx context.Context, dcLocation string, url string, sy
 	req.dcLocation = dcLocation
 	req.keyspaceID = 3
 	batchStartTime := time.Now()
+	//fmt.Println(batchStartTime.Second())
 	//fmt.Println("batchstarttime")
 	//fmt.Println(batchStartTime)
 	kk := []*tsoRequest{req}
+	//fmt.Println("taasstrea")
 	p, s, _, r := taasStream.processRequests(tsoClient.svcDiscovery.GetClusterID(), dcLocation, kk, batchStartTime)
 	//fmt.Println("result!!!!")
-	fmt.Println(p)
-	fmt.Println(s)
-	fmt.Println(r)
+	//fmt.Println(p)
+	//fmt.Println(s)
+	//fmt.Println(r)
 	/*if err := tsoClient.dispatchRequest(dcLocation, req); err != nil {
 		// Wait for a while and try again
 		time.Sleep(50 * time.Millisecond)
@@ -689,7 +700,7 @@ func (c *client) TassSend(ctx context.Context, dcLocation string, url string, sy
 	}
 	return req
 	*/
-	return 0, 0, nil
+	return p, s, r
 }
 func (c *client) GetLocalTSAsync(ctx context.Context, dcLocation string) TSFuture {
 	if span := opentracing.SpanFromContext(ctx); span != nil {
