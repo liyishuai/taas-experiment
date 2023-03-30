@@ -631,12 +631,7 @@ func (c *client) TaasAsync(ctx context.Context, dcLocation string,urllist []stri
 		fmt.Println(log)
 		fmt.Println(err)
 	}
-	sort.Slice(rlist,func(i,j Result)bool{
-		if rlist[i].High==rlist[j].High{
-		   return rlist[i].Low<rlist[j].Low
-		}
-		return rlist[i].High<rlist[j].High
-	})
+
 	
 
 
@@ -674,8 +669,6 @@ func (c *client) TassSend(ctx context.Context, dcLocation string, url string) (p
 	req.dcLocation = dcLocation
 	req.keyspaceID = 3
 	batchStartTime := time.Now()
-	fmt.Println("batchstarttime")
-	fmt.Println(batchStartTime)
 	kk := []*tsoRequest{req}
 	p, s, _, r := taasStream.processRequests(tsoClient.svcDiscovery.GetClusterID(), dcLocation, kk, batchStartTime)
 	fmt.Println("result!!!!")

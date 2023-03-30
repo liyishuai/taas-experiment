@@ -188,6 +188,7 @@ require (
 )
 
 replace google.golang.org/grpc v1.51.0 => google.golang.org/grpc v1.26.0
+
 replace github.com/pingcap/kvproto => ./taas-proto/taasplugin/
 
 // When you modify PD cooperatively with kvproto, this will be useful to submit the PR to PD and the PR to

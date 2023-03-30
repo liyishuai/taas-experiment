@@ -36,6 +36,9 @@ import (
 
 const (
 	globalDCLocation          = "global"
+	taasDCLocation 			  = "taas"
+	taasMemberId              = 1111
+	taasMemberName			  = "TaasVirtualMember"
 	memberUpdateInterval      = time.Minute
 	serviceModeUpdateInterval = 3 * time.Second
 	updateMemberTimeout       = time.Second // Use a shorter timeout to recover faster from network isolation.
@@ -427,18 +430,21 @@ func (c *pdServiceDiscovery) updateMember() error {
 			// Add taas client urls to members
 			log.Info("zghtag", zap.String("updateMember", fmt.Sprintf("%s", members.GetLeader().GetDcLocation())))
 			allMembers := members.GetMembers()
-			allMemberClientUrls := ""
+			allMemberClientUrls := []string{}
 			for _, member := range allMembers {
-
-				allMemberClientUrls += member.GetClientUrls()[0]
-				allMemberClientUrls += ","
+				allMemberClientUrls = append(allMemberClientUrls, member.GetClientUrls()[0])
 			}
-			log.Info("zghtag", zap.String("allMemberClientUrls", allMemberClientUrls))
+			log.Info("zghtag", zap.String("allMemberClientUrls", (fmt.Sprintf("%s",allMemberClientUrls))))
 			allocatorsWithTaaS := members.GetTsoAllocatorLeaders()
 			if allocatorsWithTaaS == nil {
 				allocatorsWithTaaS = make(map[string]*pdpb.Member)
 			}
-			allocatorsWithTaaS["taas"] = members.GetLeader()
+			allocatorsWithTaaS["taas"] = &pdpb.Member{
+				Name:       taasMemberName,
+				MemberId:   taasMemberId,
+				ClientUrls: allMemberClientUrls,
+				DcLocation: taasDCLocation,
+			}
 			errTSO = c.switchTSOAllocatorLeaders(allocatorsWithTaaS)
 		}
 
@@ -599,7 +605,7 @@ func (c *pdServiceDiscovery) GetOrCreateGRPCConn(addr string) (*grpc.ClientConn,
 	//fmt.Println("run pd GetOrCreateGRPCConn")
 	//fmt.Println(addr)
 	// hack change
-	needlist := []string{"http://11.158.168.215:3010", "http://11.158.168.215:3020", "http://11.158.168.215:3030"}
+	needlist := []string{"http://11.158.168.215:6010", "http://11.158.168.215:6020", "http://11.158.168.215:6030"}
 	for i := 0; i < len(needlist); i++ {
 		grpcutil.GetOrCreateGRPCConn(c.ctx, &c.clientConns, needlist[i], c.tlsCfg, c.option.gRPCDialOptions...)
 	}
