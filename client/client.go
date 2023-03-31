@@ -77,7 +77,7 @@ type Client interface {
 	// syncing leader from server.
 	GetLeaderAddr() string
 	TaasAsync(ctx context.Context, dcLocation string, urllist []string, M int32) (physical int64, logical int64, err error)
-	TassSend(ctx context.Context, dcLocation string, url string, sync Result) (physical int64, logical int64, err error)
+	TassSend(ctx context.Context, dcLocation string, url string, sync Result, wg *sync.WaitGroup, errorchan chan<- int)
 	// GetRegion gets a region and its leader Peer from PD by key.
 	InitTaas(url string) error
 	// The region may expire after split. Caller is responsible for caching and
@@ -279,7 +279,7 @@ type client struct {
 
 	// For service mode switching.
 	serviceModeKeeper
-	Cache map[string]Result
+	Cache sync.Map
 	Mutex sync.Mutex
 	// For internal usage.
 	updateTokenConnectionCh chan struct{}
@@ -357,7 +357,7 @@ func NewClientWithKeyspace(ctx context.Context, keyspaceID uint32, svrAddrs []st
 func (c *client) setup() error {
 	//fmt.Println("the client run set up once!!!!!!!!!!!")
 
-	c.Cache = make(map[string]Result)
+	c.Cache = sync.Map{}
 	c.taasMap = make(map[string]tsoStream)
 	// Init the client base.
 	if err := c.pdSvcDiscovery.Init(); err != nil {
@@ -612,6 +612,7 @@ type Result struct {
 // var Cache map[string]Result
 func (c *client) InitTaas(url string) error {
 	//fmt.Println(url)
+
 	tsoClient := c.getTSOClient()
 	conn, err := c.pdSvcDiscovery.GetOrCreateGRPCConn(url)
 	if err != nil {
@@ -620,52 +621,73 @@ func (c *client) InitTaas(url string) error {
 	cctx, cancel := context.WithCancel(context.Background())
 	//timeout:=c.option.timeout
 	tempStream, err := tsoClient.TsoStreamBuilderFactory.makeBuilder(conn).buildTaas(cctx, cancel, c.option.timeout)
+	if err != nil {
+		return nil
+	}
 	c.taasMap[url] = tempStream
 	c.clusterid = tsoClient.svcDiscovery.GetClusterID()
 	return nil
 }
 func (c *client) TaasAsync(ctx context.Context, dcLocation string, urllist []string, M int32) (physical int64, logical int64, err error) {
-	var errorlist []string
+	//var errorlist []string
+	//log.Info("633")
 	var rlist []Result
+	var wg sync.WaitGroup
+	errchannel := make(chan int)
+	nochannel := make(chan int)
+	//ch := make(chan int)
 	tempResult := Result{High: -1, Low: -1}
 	for i := 0; i < len(urllist); i++ {
-		phy, log, err := c.TassSend(ctx, dcLocation, urllist[i], tempResult)
-		//fmt.Println("ji")
-		//duration := t2.Sub(t1)
-		//fmt.Println(duration.Milliseconds())
-		if err != nil {
-			errorlist = append(errorlist, urllist[i])
-			continue
-		} else {
-			c.Mutex.Lock()
-			c.Cache[urllist[i]] = Result{High: phy, Low: log}
-			rlist = append(rlist, Result{High: phy, Low: log})
-			c.Mutex.Unlock()
-		}
+		wg.Add(1)
+		go c.TassSend(ctx, dcLocation, urllist[i], tempResult, &wg, errchannel)
+
 	}
 
-	return 0, 0, nil
+	//return 0, 0, nil
+	wg.Wait()
+	c.Cache.Range(func(key, value interface{}) bool {
+		if slice, ok := value.([]int64); ok {
+			rlist = append(rlist, Result{High: slice[0], Low: slice[1]})
+		}
+		return true
+	})
+	//log.Info("653")
 	sort.Slice(rlist, func(i, j int) bool {
 		if rlist[i].High == rlist[j].High {
 			return rlist[i].Low < rlist[j].Low
 		}
 		return rlist[i].High < rlist[j].High
 	})
-	syncvalue := rlist[0]
-	if len(errorlist) != 0 {
-		for i := 0; i < len(errorlist); i++ {
-			c.TassSend(ctx, dcLocation, urllist[i], syncvalue)
-
+	syncvalue := rlist[M]
+	//log.Error("come the second 1")
+	select {
+	case <-errchannel:
+		for i := 0; i < len(urllist); i++ {
+			//c.InitTaas(urllist[i])
+			wg.Add(1)
+			go c.TassSend(ctx, dcLocation, urllist[i], syncvalue, &wg, nochannel)
 		}
+	default:
+		break
 	}
+	wg.Wait()
+	//log.Info("673")
+
 	return 0, 0, nil
 }
 
-func (c *client) TassSend(ctx context.Context, dcLocation string, url string, sync Result) (physical int64, logical int64, err error) {
+func (c *client) TassSend(ctx context.Context, dcLocation string, url string, sync Result, wg *sync.WaitGroup, errorchan chan<- int) {
+	defer wg.Done()
 	tsoClient := c.getTSOClient()
 	conn, err := c.pdSvcDiscovery.GetOrCreateGRPCConn(url)
 	cctx, cancel := context.WithCancel(context.Background())
 	taasStream, err := tsoClient.TsoStreamBuilderFactory.makeBuilder(conn).buildTaas(cctx, cancel, c.option.timeout)
+	if err != nil {
+		//log.Error("connection error", zap.String("member-URL", url), errs.ZapError(err))
+		errorchan <- 1
+		return
+	}
+
 	req := tsoReqPool.Get().(*tsoRequest)
 	if sync.High != -1 {
 		req.physical = sync.High
@@ -678,8 +700,13 @@ func (c *client) TassSend(ctx context.Context, dcLocation string, url string, sy
 	batchStartTime := time.Now()
 
 	tTsoRequest := []*tsoRequest{req}
-	p, s, _, r := taasStream.processRequests(tsoClient.svcDiscovery.GetClusterID(), dcLocation, tTsoRequest, batchStartTime)
-	return p, s, r
+	p, s, _, r := taasStream.processRequests(c.clusterid, dcLocation, tTsoRequest, batchStartTime)
+	if r != nil {
+		errorchan <- 1
+		return
+	}
+	c.Cache.Store(url, []int64{p, s})
+	return
 }
 
 func (c *client) GetLocalTSAsync(ctx context.Context, dcLocation string) TSFuture {

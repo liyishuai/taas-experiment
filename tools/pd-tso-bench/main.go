@@ -58,7 +58,8 @@ const (
 )
 
 var (
-	errorlist = []string{"http://11.158.168.215:6020", "http://11.158.168.215:6030", "http://11.158.168.215:6010"}
+	//errorlist = []string{"http://11.158.168.215:3020", "http://11.158.168.215:3030", "http://11.158.168.215:3010", "http://11.158.168.215:3040", "http://11.158.168.215:3050"}
+	errorlist = []string{"http://11.122.134.123:3020", "http://11.122.134.123:3030", "http://11.122.134.123:3010", "http://11.122.134.123:3040", "http://11.122.134.123:3050"}
 )
 var promServer *httptest.Server
 
@@ -121,6 +122,9 @@ func bench(mainCtx context.Context) {
 	// To avoid the first time high latency.
 	for idx, pdCli := range pdClients {
 		if *dcLocation == taasDCLocation {
+			for i := 0; i < len(errorlist); i++ {
+				pdCli.InitTaas(errorlist[i])
+			}
 			_, _, err := pdCli.TaasAsync(ctx, *dcLocation, errorlist, 1)
 			if err != nil {
 				log.Fatal("get first taas tso failed", zap.Int("client-number", idx), zap.Error(err))
@@ -157,6 +161,7 @@ func bench(mainCtx context.Context) {
 
 	wg.Wait()
 
+	fmt.Println("the everything dead")
 	for _, pdCli := range pdClients {
 		pdCli.Close()
 	}
