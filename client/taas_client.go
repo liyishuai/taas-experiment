@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
-	"time"
+	// "time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/log"
@@ -29,40 +29,7 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-// TSOClient is the client used to get timestamps.
-type TSOClient interface {
-	// GetTS gets a timestamp from PD.
-	GetTS(ctx context.Context) (int64, int64, error)
-	// GetTSAsync gets a timestamp from PD, without block the caller.
-	GetTSAsync(ctx context.Context) TSFuture
-	// GetLocalTS gets a local timestamp from PD.
-	GetLocalTS(ctx context.Context, dcLocation string) (int64, int64, error)
-	// GetLocalTSAsync gets a local timestamp from PD, without block the caller.
-	GetLocalTSAsync(ctx context.Context, dcLocation string) TSFuture
-}
-
-type tsoRequest struct {
-	start      time.Time
-	clientCtx  context.Context
-	requestCtx context.Context
-	done       chan error
-	physical   int64
-	logical    int64
-	keyspaceID uint32
-	dcLocation string
-}
-
-var tsoReqPool = sync.Pool{
-	New: func() interface{} {
-		return &tsoRequest{
-			done:     make(chan error, 1),
-			physical: 0,
-			logical:  0,
-		}
-	},
-}
-
-type tsoClient struct {
+type taasClient struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
@@ -77,9 +44,9 @@ type tsoClient struct {
 	// tso allocator leader is switched.
 	tsoAllocServingAddrSwitchedCallback []func()
 
-	// tsoDispatcher is used to dispatch different TSO requests to
-	// the corresponding dc-location TSO channel.
-	tsoDispatcher sync.Map // Same as map[string]chan *tsoRequest
+	// taasDispatcher is used to dispatch different TSO requests to
+	// the corresponding taas node channel.
+	taasDispatcher sync.Map // Same as map[string]chan *tsoRequest
 	// dc-location -> deadline
 	tsDeadline sync.Map // Same as map[string]chan deadline
 	// dc-location -> *lastTSO
@@ -91,12 +58,12 @@ type tsoClient struct {
 }
 
 // newTSOClient returns a new TSO client.
-func newTSOClient(
+func newTaasClient(
 	ctx context.Context, option *option, keyspaceID uint32,
 	svcDiscovery ServiceDiscovery, factory TsoStreamBuilderFactory,
-) *tsoClient {
+) *taasClient {
 	ctx, cancel := context.WithCancel(ctx)
-	c := &tsoClient{
+	c := &taasClient{
 		ctx:                       ctx,
 		cancel:                    cancel,
 		option:                    option,
@@ -116,7 +83,7 @@ func newTSOClient(
 	return c
 }
 
-func (c *tsoClient) Setup() {
+func (c *taasClient) Setup() {
 	c.svcDiscovery.CheckMemberChanged()
 	c.updateTSODispatcher()
 
@@ -127,7 +94,7 @@ func (c *tsoClient) Setup() {
 }
 
 // Close closes the TSO client
-func (c *tsoClient) Close() {
+func (c *taasClient) Close() {
 	if c == nil {
 		return
 	}
@@ -137,7 +104,7 @@ func (c *tsoClient) Close() {
 	c.wg.Wait()
 
 	log.Info("close tso client")
-	c.tsoDispatcher.Range(func(_, dispatcherInterface interface{}) bool {
+	c.taasDispatcher.Range(func(_, dispatcherInterface interface{}) bool {
 		if dispatcherInterface != nil {
 			dispatcher := dispatcherInterface.(*tsoDispatcher)
 			tsoErr := errors.WithStack(errClosing)
@@ -150,41 +117,45 @@ func (c *tsoClient) Close() {
 	log.Info("tso client is closed")
 }
 
-// GetTSOAllocators returns {dc-location -> TSO allocator leader URL} connection map
-func (c *tsoClient) GetTSOAllocators() *sync.Map {
+// GetTaasAllocators returns {Taas node name -> Taas allocator URL} connection map
+func (c *taasClient) GetTaasAllocators() *sync.Map {
 	return &c.tsoAllocators
 }
 
-// GetTSOAllocatorServingAddrByDCLocation returns the tso allocator of the given dcLocation
-func (c *tsoClient) GetTSOAllocatorServingAddrByDCLocation(dcLocation string) (string, bool) {
-	url, exist := c.tsoAllocators.Load(dcLocation)
+// GetTaasAllocatorServingAddrByNodeName returns the tso allocator of the given taas node name 
+func (c *taasClient) GetTaasAllocatorServingAddrByNodeName(nodeName string) (string, bool) {
+	url, exist := c.tsoAllocators.Load(nodeName)
 	if !exist {
 		return "", false
 	}
 	return url.(string), true
 }
 
-// GetTSOAllocatorClientConnByDCLocation returns the tso allocator grpc client connection
-// of the given dcLocation
-func (c *tsoClient) GetTSOAllocatorClientConnByDCLocation(dcLocation string) (*grpc.ClientConn, string) {
-	url, ok := c.tsoAllocators.Load(dcLocation)
+// GetTSOAllocatorClientConnByNodeName returns the taas allocator grpc client connection
+// of the given taas node name
+func (c *taasClient) GetTaasAllocatorClientConnByNodeName(nodeName string) (*grpc.ClientConn, string) {
+	url, ok := c.tsoAllocators.Load(nodeName)
 	if !ok {
-		panic(fmt.Sprintf("the allocator leader in %s should exist", dcLocation))
+		panic(fmt.Sprintf("the allocator in %s should exist", nodeName))
 	}
 	cc, ok := c.svcDiscovery.GetClientConns().Load(url)
 	if !ok {
-		panic(fmt.Sprintf("the client connection of %s in %s should exist", url, dcLocation))
+		panic(fmt.Sprintf("the client connection of %s in %s should exist", url, nodeName))
 	}
 	return cc.(*grpc.ClientConn), url.(string)
 }
 
 // AddTSOAllocatorServingAddrSwitchedCallback adds callbacks which will be called
 // when any global/local tso allocator service endpoint is switched.
-func (c *tsoClient) AddTSOAllocatorServingAddrSwitchedCallback(callbacks ...func()) {
+func (c *taasClient) AddTSOAllocatorServingAddrSwitchedCallback(callbacks ...func()) {
 	c.tsoAllocServingAddrSwitchedCallback = append(c.tsoAllocServingAddrSwitchedCallback, callbacks...)
 }
 
-func (c *tsoClient) updateTSOLocalServAddrs(allocatorMap map[string]string) error {
+/***
+ * for service discovery
+***/
+// serveice_discovery
+func (c *taasClient) updateTSOLocalServAddrs(allocatorMap map[string]string) error {
 	if len(allocatorMap) == 0 {
 		return nil
 	}
@@ -192,25 +163,25 @@ func (c *tsoClient) updateTSOLocalServAddrs(allocatorMap map[string]string) erro
 	updated := false
 
 	// Switch to the new one
-	for dcLocation, addr := range allocatorMap {
+	for nodeName, addr := range allocatorMap {
 		if len(addr) == 0 {
 			continue
 		}
-		oldAddr, exist := c.GetTSOAllocatorServingAddrByDCLocation(dcLocation)
+		oldAddr, exist := c.GetTaasAllocatorServingAddrByNodeName(nodeName)
 		if exist && addr == oldAddr {
 			continue
 		}
 		updated = true
 		if _, err := c.svcDiscovery.GetOrCreateGRPCConn(addr); err != nil {
 			log.Warn("[tso] failed to connect dc tso allocator serving address",
-				zap.String("dc-location", dcLocation),
+				zap.String("nodeName", nodeName),
 				zap.String("serving-address", addr),
 				errs.ZapError(err))
 			return err
 		}
-		c.tsoAllocators.Store(dcLocation, addr)
+		c.tsoAllocators.Store(nodeName, addr)
 		log.Info("[tso] switch dc tso allocator serving address",
-			zap.String("dc-location", dcLocation),
+			zap.String("nodeName", nodeName),
 			zap.String("new-address", addr),
 			zap.String("old-address", oldAddr))
 	}
@@ -225,7 +196,8 @@ func (c *tsoClient) updateTSOLocalServAddrs(allocatorMap map[string]string) erro
 	return nil
 }
 
-func (c *tsoClient) updateTSOGlobalServAddr(addr string) error {
+// serveice_discovery
+func (c *taasClient) updateTSOGlobalServAddr(addr string) error {
 	c.tsoAllocators.Store(globalDCLocation, addr)
 	log.Info("[tso] switch dc tso allocator serving address",
 		zap.String("dc-location", globalDCLocation),
@@ -234,7 +206,8 @@ func (c *tsoClient) updateTSOGlobalServAddr(addr string) error {
 	return nil
 }
 
-func (c *tsoClient) gcAllocatorServingAddr(curAllocatorMap map[string]string) {
+// serveice_discovery
+func (c *taasClient) gcAllocatorServingAddr(curAllocatorMap map[string]string) {
 	// Clean up the old TSO allocators
 	c.tsoAllocators.Range(func(dcLocationKey, _ interface{}) bool {
 		dcLocation := dcLocationKey.(string)
@@ -250,10 +223,8 @@ func (c *tsoClient) gcAllocatorServingAddr(curAllocatorMap map[string]string) {
 	})
 }
 
-// backupClientConn gets a grpc client connection of the current reachable and healthy
-// backup service endpoints randomly. Backup service endpoints are followers in a
-// quorum-based cluster or secondaries in a primary/secondary configured cluster.
-func (c *tsoClient) backupClientConn() (*grpc.ClientConn, string) {
+// serveice_discovery
+func (c *taasClient) backupClientConn() (*grpc.ClientConn, string) {
 	addrs := c.svcDiscovery.GetBackupAddrs()
 	if len(addrs) < 1 {
 		return nil, ""

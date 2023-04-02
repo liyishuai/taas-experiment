@@ -59,7 +59,7 @@ const (
 
 var (
 	//errorlist = []string{"http://11.158.168.215:3020", "http://11.158.168.215:3030", "http://11.158.168.215:3010", "http://11.158.168.215:3040", "http://11.158.168.215:3050"}
-	errorlist = []string{"http://11.122.134.123:3020", "http://11.122.134.123:3030", "http://11.122.134.123:3010", "http://11.122.134.123:3040", "http://11.122.134.123:3050"}
+	errorlist = []string{"http://11.158.168.215:6010", "http://11.158.168.215:6020", "http://11.158.168.215:6030"}
 )
 var promServer *httptest.Server
 
@@ -125,7 +125,7 @@ func bench(mainCtx context.Context) {
 			for i := 0; i < len(errorlist); i++ {
 				pdCli.InitTaas(errorlist[i])
 			}
-			_, _, err := pdCli.TaasAsync(ctx, *dcLocation, errorlist, 1)
+			_, _, err := pdCli.GetTaasTS(ctx, *dcLocation, 2)
 			if err != nil {
 				log.Fatal("get first taas tso failed", zap.Int("client-number", idx), zap.Error(err))
 			}
@@ -377,8 +377,7 @@ func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration) {
 		for ; i < maxRetryTime; i++ {
 			err = error(nil)
 			if *dcLocation == taasDCLocation {
-				_, _, err = pdCli.TaasAsync(ctx, *dcLocation, errorlist, 1)
-
+				_, _, err = pdCli.GetTaasTS(reqCtx, *dcLocation , 2)
 			} else {
 				_, _, err = pdCli.GetLocalTS(reqCtx, *dcLocation)
 			}
