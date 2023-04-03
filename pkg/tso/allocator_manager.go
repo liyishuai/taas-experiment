@@ -1008,7 +1008,7 @@ func (am *AllocatorManager) deleteAllocatorGroup(dcLocation string) {
 
 // HandleTSORequest forwards TSO allocation requests to correct TSO Allocators.
 func (am *AllocatorManager) HandleTSORequest(dcLocation string, count uint32) (pdpb.Timestamp, error) {
-	log.Info("zghtag", zap.String("HandleTSORequest", dcLocation))
+	// log.Info("zghtag", zap.String("HandleTSORequest", dcLocation))
 	if dcLocation == "" {
 		dcLocation = GlobalDCLocation
 	}

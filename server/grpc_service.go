@@ -221,9 +221,9 @@ func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
 			return status.Errorf(codes.FailedPrecondition, "mismatch cluster id, need %d but got %d", s.clusterID, request.GetHeader().GetClusterId())
 		}
 		count := request.GetCount()
-		log.Info("zghtag", zap.String("request", fmt.Sprintf("%s", request.String())))
+		// log.Info("zghtag", zap.String("request", fmt.Sprintf("%s", request.String())))
 		ts, err := s.taasAllocatorManager.HandleTSORequest(request.GetDcLocation(), count)
-		log.Info("zghtag", zap.String("timestamp", ts.String()))
+		// log.Info("zghtag", zap.String("timestamp", ts.String()))
 		if err != nil {
 			return status.Errorf(codes.Unknown, err.Error())
 		}
@@ -233,7 +233,7 @@ func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
 			Timestamp: &ts,
 			Count:     count,
 		}
-		log.Info("zghtag", zap.String("return tso-resp", response.String()))	
+		// log.Info("zghtag", zap.String("return tso-resp", response.String()))	
 		if err := stream.Send(response); err != nil {
 			return errors.WithStack(err)
 		}

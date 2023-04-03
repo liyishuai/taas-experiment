@@ -281,6 +281,7 @@ func (c *taasClient) handleDispatcher(
 		// addr -> connectionContext
 		connectionCtxs sync.Map
 		opts           []opentracing.StartSpanOption
+		nodeAddr   string
 	)
 	defer func() {
 		log.Info("[taas] exit taas dispatcher", zap.String("dc-location", nodeName))
@@ -296,6 +297,13 @@ func (c *taasClient) handleDispatcher(
 
 	// Loop through each batch of TSO requests and send them for processing.
 	streamLoopTimer := time.NewTimer(c.option.timeout)
+
+	// Store taas nodeAddr of nodeName
+	nodeAddr, ok := c.GetTaasAllocatorServingAddrByNodeName(nodeName)
+	if !ok {
+		log.Error("[taas] get taas address by nodename failed", zap.String("nodeName", nodeName))
+	}
+
 tsoBatchLoop:
 	for {
 		select {
@@ -324,10 +332,6 @@ tsoBatchLoop:
 		for {
 			// connectionCtx := c.chooseStream(&connectionCtxs)
 			// connectionCtx := &taasConnectionContext{}
-			nodeAddr, ok := c.GetTaasAllocatorServingAddrByNodeName(nodeName)
-			if !ok {
-				log.Error("[taas] get taas address by nodename failed", zap.String("nodeName", nodeName))
-			}
 			ctx, ok := connectionCtxs.Load(nodeAddr)
 			if !ok {
 				log.Error("[taas] load taas stream failed", zap.String("nodeAddr", nodeAddr))
