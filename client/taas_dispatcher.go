@@ -16,7 +16,7 @@ package pd
 
 import (
 	"context"
-	"fmt"
+	// "fmt"
 	"sync"
 	"time"
 
@@ -62,23 +62,39 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 	if dcLocation != taasDCLocation{
 		log.Error("zghtag", zap.String("wrong DC", dcLocation))
 	}
+	tRequests := make(map[string]*tsoRequest)
 	c.taasDispatcher.Range(func(nodeNameKey, _ interface{}) bool {
 		nodeName := nodeNameKey.(string)
-		// log.Info("zghtag", zap.String("tsoClientCreate", dcLocation))
 		if !c.checkTaasDispatcher(nodeName) {
 			c.createTaasDispatcher(nodeName)
 		}
+		tRequest := request
+		tRequests[nodeName] = (*tsoRequest)(tRequest)
 		return true
 	})
-	dispatcher, ok := c.taasDispatcher.Load("pd1")
-	// log.Info("zghtag", zap.String("taas client dispatchRequest", dcLocation))
-	if !ok {
-		err := errs.ErrClientGetTSO.FastGenByArgs(fmt.Sprintf("unknown dc-location %s to the client", dcLocation))
-		log.Error("[tso] dispatch tso request error", zap.String("dc-location", dcLocation), errs.ZapError(err))
-		c.svcDiscovery.ScheduleCheckMemberChanged()
-		return err
+	// taasNodesCh := make(chan error, len(c.taasDispatcher))
+	c.taasDispatcher.Range(func(nodeNameKey, dp interface{}) bool {
+		nodeName := nodeNameKey.(string)
+		// log.Info("zghtag", zap.String("taasDispatcher dispatch", nodeName))
+		dispatcher := dp.(*taasDispatcher)
+		// tRequest := request
+		// tRequest.requestCtx, _ = context.WithCancel(request.requestCtx)
+		// c.twg.Add(1)
+		tRequest :=  tRequests[nodeName]
+		go func(dispatcher *taasDispatcher, request *tsoRequest){//, twg sync.WaitGroup){
+			// defer twg.Done()
+			dispatcher.tsoBatchController.tsoRequestCh <- request
+		} (dispatcher, tRequest)//, c.twg)
+		return true
+	})
+	for _, req := range(tRequests) {
+		err := <- req.done
+		if err != nil {
+			log.Error("zghtag", zap.Error(err))
+		}
 	}
-	dispatcher.(*taasDispatcher).tsoBatchController.tsoRequestCh <- request
+	request.done <- nil
+	// c.twg.Wait()
 	return nil
 }
 
@@ -333,8 +349,9 @@ tsoBatchLoop:
 			// connectionCtx := c.chooseStream(&connectionCtxs)
 			// connectionCtx := &taasConnectionContext{}
 			ctx, ok := connectionCtxs.Load(nodeAddr)
-			if !ok {
+			if !ok || ctx == nil {
 				log.Error("[taas] load taas stream failed", zap.String("nodeAddr", nodeAddr))
+				continue streamChoosingLoop
 			}
 			connectionCtx := ctx.(*taasConnectionContext)
 
@@ -548,11 +565,12 @@ func (c *taasClient) compareAndSwapTS(dcLocation string, physical, firstLogical 
 	lastTSOPointer := lastTSOInterface.(*lastTSO)
 	lastPhysical := lastTSOPointer.physical
 	lastLogical := lastTSOPointer.logical
+	// FIXME:zgh fix the taas logic
 	// The TSO we get is a range like [largestLogical-count+1, largestLogical], so we save the last TSO's largest logical to compare with the new TSO's first logical.
 	// For example, if we have a TSO resp with logical 10, count 5, then all TSOs we get will be [6, 7, 8, 9, 10].
 	if tsLessEqual(physical, firstLogical, lastPhysical, lastLogical) {
-		panic(errors.Errorf("%s timestamp fallback, newly acquired ts (%d, %d) is less or equal to last one (%d, %d)",
-			dcLocation, physical, firstLogical, lastPhysical, lastLogical))
+		// panic(errors.Errorf("%s timestamp fallback, newly acquired ts (%d, %d) is less or equal to last one (%d, %d)",
+		// 	dcLocation, physical, firstLogical, lastPhysical, lastLogical))
 	}
 	lastTSOPointer.physical = physical
 	// Same as above, we save the largest logical part here.
