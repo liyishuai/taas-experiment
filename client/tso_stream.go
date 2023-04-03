@@ -23,6 +23,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/pingcap/kvproto/pkg/tsopb"
+	// "github.com/pingcap/log"
 	"github.com/tikv/pd/client/errs"
 	"google.golang.org/grpc"
 )
@@ -229,6 +230,7 @@ type pdTaasStream struct {
 
 func (s *pdTaasStream) processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
 	batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error) {
+		// log.Info("zghtag: processRequests")
 		start := time.Now()
 		count := int64(len(requests))
 		req := &pdpb.TaasRequest{

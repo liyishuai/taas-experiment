@@ -403,11 +403,14 @@ func (c *client) setServiceMode(newMode pdpb.ServiceMode) {
 	// Re-create a new TSO client.
 	var (
 		newTSOCli          *tsoClient
+		newTaasCli		   *taasClient
 		newTSOSvcDiscovery ServiceDiscovery
 	)
 	switch newMode {
 	case pdpb.ServiceMode_PD_SVC_MODE:
 		newTSOCli = newTSOClient(c.ctx, c.option, c.keyspaceID,
+			c.pdSvcDiscovery, &pdTSOStreamBuilderFactory{})
+		newTaasCli = newTaasClient(c.ctx, c.option, c.keyspaceID,
 			c.pdSvcDiscovery, &pdTSOStreamBuilderFactory{})
 	case pdpb.ServiceMode_API_SVC_MODE:
 		newTSOSvcDiscovery = newTSOServiceDiscovery(c.ctx, MetaStorageClient(c),
@@ -428,6 +431,15 @@ func (c *client) setServiceMode(newMode pdpb.ServiceMode) {
 	oldTSOClient := c.getTSOClient()
 	c.tsoClient.Store(newTSOCli)
 	oldTSOClient.Close()
+	// Replace taas client
+	oldTaasClient := c.getTaasClient()
+	if newTaasCli != nil{
+		newTaasCli.Setup()
+		if oldTaasClient != nil {
+			oldTaasClient.Close()
+		}
+		c.taasClient.Store(newTaasCli)
+	}
 	// Replace the old TSO service discovery if needed.
 	oldTSOSvcDiscovery := c.tsoSvcDiscovery
 	if newTSOSvcDiscovery != nil {
@@ -646,9 +658,11 @@ func (c *client) GetTaasTSAsync(ctx context.Context, dcLocation string, M int32)
 	req.dcLocation = dcLocation
 
 	if taasClient == nil {
+		log.Error("zghtag: no taas client")
 		req.done <- errs.ErrClientGetTSO
 		return req
 	}
+	// log.Info("zghtag: start dispatch taas req")
 	if err := taasClient.dispatchRequest(dcLocation, req); err != nil {
 		// Wait for a while and try again
 		time.Sleep(50 * time.Millisecond)

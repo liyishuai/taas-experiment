@@ -36,8 +36,6 @@ import (
 const (
 	globalDCLocation          = "global"
 	taasDCLocation            = "taas"
-	taasMemberId              = 1111
-	taasMemberName            = "TaasVirtualMember"
 	memberUpdateInterval      = time.Minute
 	serviceModeUpdateInterval = 3 * time.Second
 	updateMemberTimeout       = time.Second // Use a shorter timeout to recover faster from network isolation.
@@ -335,13 +333,6 @@ func (c *pdServiceDiscovery) SetTSOGlobalServAddrUpdatedCallback(callback tsoGlo
 	if len(addr) > 0 {
 		callback(addr)
 	}
-	/*addrlist:=c.getFollowerAddrs()
-	    for ip:=range addrlist{
-	        callback(ip)
-		}
-		c.tsoGlobalAllocLeaderUpdatedCb = callback
-		zelu
-	*/
 }
 
 // getLeaderAddr returns the leader address.
@@ -429,24 +420,23 @@ func (c *pdServiceDiscovery) updateMember() error {
 			// Add taas client urls to members
 			//log.Info("zghtag", zap.String("updateMember", fmt.Sprintf("%s", members.GetLeader().GetDcLocation())))
 			allMembers := members.GetMembers()
-			allMemberClientUrls := []string{}
+			allocatorsWithTaasNodes := make(map[string]*pdpb.Member)
+			if allocatorsWithTaasNodes == nil {
+				allocatorsWithTaasNodes = members.GetTsoAllocatorLeaders()
+			}
 			for _, member := range allMembers {
-				allMemberClientUrls = append(allMemberClientUrls, member.GetClientUrls()[0])
+				allMemberClientUrls := []string{member.GetClientUrls()[0]}
+				allocatorsWithTaasNodes[member.GetName()] = &pdpb.Member{
+					Name:       member.GetName(),
+					MemberId:   member.GetMemberId(),
+					ClientUrls: allMemberClientUrls,
+					DcLocation: taasDCLocation,
+				}
 			}
 			//log.Info("zghtag", zap.String("allMemberClientUrls", (fmt.Sprintf("%s",allMemberClientUrls))))
-			allocatorsWithTaaS := members.GetTsoAllocatorLeaders()
-			if allocatorsWithTaaS == nil {
-				allocatorsWithTaaS = make(map[string]*pdpb.Member)
-			}
-			/*
-			allocatorsWithTaaS["taas"] = &pdpb.Member{
-				Name:       taasMemberName,
-				MemberId:   taasMemberId,
-				ClientUrls: allMemberClientUrls,
-				DcLocation: taasDCLocation,
-			}
-			*/
-			errTSO = c.switchTSOAllocatorLeaders(allocatorsWithTaaS)
+
+
+			errTSO = c.switchTSOAllocatorLeaders(allocatorsWithTaasNodes)
 		}
 
 		// Failed to get members

@@ -122,9 +122,6 @@ func bench(mainCtx context.Context) {
 	// To avoid the first time high latency.
 	for idx, pdCli := range pdClients {
 		if *dcLocation == taasDCLocation {
-			for i := 0; i < len(errorlist); i++ {
-				pdCli.InitTaas(errorlist[i])
-			}
 			_, _, err := pdCli.GetTaasTS(ctx, *dcLocation, 2)
 			if err != nil {
 				log.Fatal("get first taas tso failed", zap.Int("client-number", idx), zap.Error(err))

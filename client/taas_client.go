@@ -35,6 +35,9 @@ type taasClient struct {
 	wg     sync.WaitGroup
 	option *option
 
+	taasCache  sync.Map // store latest timestamp of each taas node
+	twg        sync.WaitGroup
+
 	keyspaceID   uint32
 	svcDiscovery ServiceDiscovery
 	TsoStreamBuilderFactory
@@ -76,8 +79,8 @@ func newTaasClient(
 	}
 
 	eventSrc := svcDiscovery.(tsoAllocatorEventSource)
-	eventSrc.SetTSOLocalServAddrsUpdatedCallback(c.updateTSOLocalServAddrs)
-	eventSrc.SetTSOGlobalServAddrUpdatedCallback(c.updateTSOGlobalServAddr)
+	eventSrc.SetTSOLocalServAddrsUpdatedCallback(c.updateTaasLocalServAddrs)
+	eventSrc.SetTSOGlobalServAddrUpdatedCallback(c.updateTaasGlobalServAddr)
 	c.svcDiscovery.AddServiceAddrsSwitchedCallback(c.scheduleUpdateTSOConnectionCtxs)
 
 	return c
@@ -155,7 +158,7 @@ func (c *taasClient) AddTSOAllocatorServingAddrSwitchedCallback(callbacks ...fun
  * for service discovery
 ***/
 // serveice_discovery
-func (c *taasClient) updateTSOLocalServAddrs(allocatorMap map[string]string) error {
+func (c *taasClient) updateTaasLocalServAddrs(allocatorMap map[string]string) error {
 	if len(allocatorMap) == 0 {
 		return nil
 	}
@@ -197,12 +200,12 @@ func (c *taasClient) updateTSOLocalServAddrs(allocatorMap map[string]string) err
 }
 
 // serveice_discovery
-func (c *taasClient) updateTSOGlobalServAddr(addr string) error {
-	c.tsoAllocators.Store(globalDCLocation, addr)
-	log.Info("[tso] switch dc tso allocator serving address",
+func (c *taasClient) updateTaasGlobalServAddr(addr string) error {
+	// c.tsoAllocators.Store(globalDCLocation, addr)
+	log.Info("[taas] skip global tso allocator serving address",
 		zap.String("dc-location", globalDCLocation),
 		zap.String("new-address", addr))
-	c.scheduleCheckTSODispatcher()
+	// c.scheduleCheckTSODispatcher()
 	return nil
 }
 
