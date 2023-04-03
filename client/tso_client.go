@@ -46,7 +46,6 @@ type tsoRequest struct {
 	clientCtx  context.Context
 	requestCtx context.Context
 	done       chan error
-	// taasDone   chan error
 	physical   int64
 	logical    int64
 	keyspaceID uint32

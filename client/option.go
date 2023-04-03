@@ -23,6 +23,7 @@ import (
 )
 
 const (
+	defaultClientType 							 = "tso"
 	defaultPDTimeout                             = 3 * time.Second
 	maxInitClusterRetries                        = 100
 	defaultMaxTSOBatchWaitInterval time.Duration = 0
@@ -47,6 +48,7 @@ const (
 // It provides the ability to change some PD client's options online from the outside.
 type option struct {
 	// Static options.
+	clientType       string
 	gRPCDialOptions  []grpc.DialOption
 	timeout          time.Duration
 	maxRetryTimes    int
@@ -61,6 +63,7 @@ type option struct {
 // newOption creates a new PD client option with the default values set.
 func newOption() *option {
 	co := &option{
+		clientType: 			  defaultClientType,	
 		timeout:                  defaultPDTimeout,
 		maxRetryTimes:            maxInitClusterRetries,
 		enableTSOFollowerProxyCh: make(chan struct{}, 1),

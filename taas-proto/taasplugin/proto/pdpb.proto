@@ -193,7 +193,7 @@ message TsoRequest {
 }
 message TaasRequest {
     RequestHeader header = 1;
-    bool stamp = 2;
+    Timestamp timestamp = 2;
     uint32 count = 3;
     string dc_location = 4;
 }
@@ -406,6 +406,7 @@ enum ServiceMode {
     UNKNOWN_SVC_MODE = 0;
     PD_SVC_MODE = 1;
     API_SVC_MODE = 2;
+    TAAS_SVC_MODE = 3;
 }
 
 message GetClusterInfoResponse {

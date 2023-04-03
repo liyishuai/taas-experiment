@@ -15,8 +15,7 @@ option java_package = "org.tikv.kvproto";
 
 service TSO {
     rpc Tso(stream TsoRequest) returns (stream TsoResponse) {}
-    rpc Taas(stream TaasRequest) returns (stream TsoResponse) {}
-
+    rpc Taas(stream TaaSRequest) returns (stream TsoResponse) {}
 }
 
 message RequestHeader {
@@ -55,23 +54,26 @@ message Error {
     string message = 2;
 }
 
+message TaaSRequest {
+    RequestHeader header = 1;
+    uint32 stamp = 2;
+    uint32 count = 3;
+    string dc_location = 4;
+}
+
 message TsoRequest {
     RequestHeader header = 1;
     uint32 count = 2;
     string dc_location = 3;
 }
-message TaasRequest {
-    RequestHeader header = 1;
-    pdpb.Timestamp timestamp = 2;
-    uint32 count = 3;
-    string dc_location = 4;
-}
+
 message TsoResponse {
     ResponseHeader header = 1;
 
     uint32 count = 2;
     pdpb.Timestamp timestamp = 3;
 }
+
 message Participant {
     // name is the unique name of the TSO participant.
     string name = 1;

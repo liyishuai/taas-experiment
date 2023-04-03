@@ -278,7 +278,6 @@ func (c *pdServiceDiscovery) GetServingEndpointClientConn() *grpc.ClientConn {
 
 // GetClientConns returns the mapping {addr -> a gRPC connection}
 func (c *pdServiceDiscovery) GetClientConns() *sync.Map {
-	//fmt.Println("xixi")
 	return &c.clientConns
 }
 
@@ -333,6 +332,7 @@ func (c *pdServiceDiscovery) SetTSOGlobalServAddrUpdatedCallback(callback tsoGlo
 	if len(addr) > 0 {
 		callback(addr)
 	}
+	c.tsoGlobalAllocLeaderUpdatedCb = callback
 }
 
 // getLeaderAddr returns the leader address.
@@ -420,7 +420,10 @@ func (c *pdServiceDiscovery) updateMember() error {
 			// Add taas client urls to members
 			//log.Info("zghtag", zap.String("updateMember", fmt.Sprintf("%s", members.GetLeader().GetDcLocation())))
 			allMembers := members.GetMembers()
-			allocatorsWithTaasNodes := make(map[string]*pdpb.Member)
+			allocatorsWithTaasNodes := members.GetTsoAllocatorLeaders()
+			if allocatorsWithTaasNodes == nil {
+				allocatorsWithTaasNodes = make(map[string]*pdpb.Member)
+			} 
 			if allocatorsWithTaasNodes == nil {
 				allocatorsWithTaasNodes = members.GetTsoAllocatorLeaders()
 			}
@@ -441,9 +444,10 @@ func (c *pdServiceDiscovery) updateMember() error {
 
 		// Failed to get members
 		if err != nil {
-			log.Info("[pd] cannot update member from this address",
-				zap.String("address", url),
-				errs.ZapError(err))
+			// log.Info("[pd] cannot update member from this address",
+			// 	zap.String("address", url),
+			// 	zap.Error(errors.WithStack(err)))
+				// errs.ZapError(errors.WithStack(err)))
 			select {
 			case <-c.ctx.Done():
 				return errors.WithStack(err)
@@ -593,12 +597,5 @@ func (c *pdServiceDiscovery) switchTSOAllocatorLeaders(allocatorMap map[string]*
 
 // GetOrCreateGRPCConn returns the corresponding grpc client connection of the given addr
 func (c *pdServiceDiscovery) GetOrCreateGRPCConn(addr string) (*grpc.ClientConn, error) {
-	////fmt.Println("run pd GetOrCreateGRPCConn")
-	////fmt.Println(addr)
-	// hack change
-	needlist := []string{"http://11.158.168.215:6010", "http://11.158.168.215:6020", "http://11.158.168.215:6030"}
-	for i := 0; i < len(needlist); i++ {
-		grpcutil.GetOrCreateGRPCConn(c.ctx, &c.clientConns, needlist[i], c.tlsCfg, c.option.gRPCDialOptions...)
-	}
 	return grpcutil.GetOrCreateGRPCConn(c.ctx, &c.clientConns, addr, c.tlsCfg, c.option.gRPCDialOptions...)
 }

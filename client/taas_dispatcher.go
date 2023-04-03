@@ -58,43 +58,84 @@ func (c *taasClient) scheduleUpdateTSOConnectionCtxs() {
 
 // TODO:zgh dispatch to all taas node here
 func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) error {
+	var (
+		fastRequests = make(map[string]*tsoRequest)
+		slowRequests = make(map[string]*tsoRequest)
+		sucNodes = sync.Map{}
+		sucWg    = sync.WaitGroup{}
+		// SucNum   = sync.WaitGroup{}
+	)
 	// put request into stream of each taas rpc server
 	if dcLocation != taasDCLocation{
 		log.Error("zghtag", zap.String("wrong DC", dcLocation))
 	}
-	tRequests := make(map[string]*tsoRequest)
 	c.taasDispatcher.Range(func(nodeNameKey, _ interface{}) bool {
 		nodeName := nodeNameKey.(string)
 		if !c.checkTaasDispatcher(nodeName) {
 			c.createTaasDispatcher(nodeName)
 		}
 		tRequest := request
-		tRequests[nodeName] = (*tsoRequest)(tRequest)
+		fastRequests[nodeName] = (*tsoRequest)(tRequest)
 		return true
 	})
-	// taasNodesCh := make(chan error, len(c.taasDispatcher))
+	// use the Mth smallest value as resp ts
+	// M := len(fastRequests)
 	c.taasDispatcher.Range(func(nodeNameKey, dp interface{}) bool {
 		nodeName := nodeNameKey.(string)
-		// log.Info("zghtag", zap.String("taasDispatcher dispatch", nodeName))
 		dispatcher := dp.(*taasDispatcher)
-		// tRequest := request
-		// tRequest.requestCtx, _ = context.WithCancel(request.requestCtx)
-		// c.twg.Add(1)
-		tRequest :=  tRequests[nodeName]
-		go func(dispatcher *taasDispatcher, request *tsoRequest){//, twg sync.WaitGroup){
-			// defer twg.Done()
+		tRequest :=  fastRequests[nodeName]
+		go func(dispatcher *taasDispatcher, request *tsoRequest){
 			dispatcher.tsoBatchController.tsoRequestCh <- request
-		} (dispatcher, tRequest)//, c.twg)
+		} (dispatcher, tRequest)
 		return true
 	})
-	for _, req := range(tRequests) {
+	useFastPath := true
+
+	for nodeName, req := range(fastRequests) {
+		sucWg.Add(1)
+		go func(nodeName string, sucNodes *sync.Map)(){
+			defer sucWg.Done()
+			for {
+				ticker := time.NewTicker(500 * time.Microsecond) // 0.5ms for taas timeout
+				defer ticker.Stop()
+				select {
+				case err:= <- req.done:
+					if err != nil {
+						log.Error("zghtag not sucNode", zap.String("nodeName", nodeName))
+						sucNodes.LoadOrStore(nodeName, false)
+					}
+					return
+				case <-ticker.C:
+					return
+				}
+			}
+		}(nodeName, &sucNodes)
+	}
+	sucWg.Wait()
+	sucNodes.Range(func(nodeNameKey, sucSt interface{}) bool{
+		nodeName := nodeNameKey.(string)
+		suc := sucSt.(bool)
+		if !suc {
+			useFastPath = false
+		} else {
+			tRequest := request
+			slowRequests[nodeName] = (*tsoRequest)(tRequest)
+		}
+		return true
+	})
+	if useFastPath {
+		request.done <- nil
+		return nil
+	}
+
+	// slow path with 1Timeout+1RTT
+	for _, req := range(slowRequests) {
 		err := <- req.done
 		if err != nil {
-			log.Error("zghtag", zap.Error(err))
+			log.Error("zghtag slow path", zap.Error(err))
 		}
 	}
 	request.done <- nil
-	// c.twg.Wait()
 	return nil
 }
 
@@ -279,6 +320,7 @@ func (c *taasClient) createTaasDispatcher(nodeName string) {
 		go c.handleDispatcher(dispatcherCtx, nodeName, dispatcher.tsoBatchController)
 		log.Info("[taas] tso handle dispatcher", zap.String("taas node name", nodeName))
 	} else {
+		log.Error("[taas] tso handle dispatcher failed", zap.String("taas node name", nodeName))
 		dispatcherCancel()
 	}
 }
@@ -350,7 +392,7 @@ tsoBatchLoop:
 			// connectionCtx := &taasConnectionContext{}
 			ctx, ok := connectionCtxs.Load(nodeAddr)
 			if !ok || ctx == nil {
-				log.Error("[taas] load taas stream failed", zap.String("nodeAddr", nodeAddr))
+				// log.Error("[taas] load taas stream failed", zap.String("nodeAddr", nodeAddr))
 				continue streamChoosingLoop
 			}
 			connectionCtx := ctx.(*taasConnectionContext)
@@ -416,28 +458,28 @@ tsoBatchLoop:
 				return
 			default:
 			}
-			c.svcDiscovery.ScheduleCheckMemberChanged()
-			log.Error("[tso] getTS error", zap.String("dc-location", nodeName), zap.String("stream-addr", streamAddr), errs.ZapError(errs.ErrClientGetTSO, err))
+			// c.svcDiscovery.ScheduleCheckMemberChanged()
+			log.Error("[tso] getTS error", zap.String("nodeName", nodeName), zap.String("stream-addr", streamAddr), errs.ZapError(errs.ErrClientGetTSO, err))
 			// Set `stream` to nil and remove this stream from the `connectionCtxs` due to error.
-			connectionCtxs.Delete(streamAddr)
+			// connectionCtxs.Delete(streamAddr)
 			cancel()
 			stream = nil
 			// Because ScheduleCheckMemberChanged is asynchronous, if the leader changes, we better call `updateMember` ASAP.
-			if IsLeaderChange(err) {
-				if err := c.svcDiscovery.CheckMemberChanged(); err != nil {
-					select {
-					case <-dispatcherCtx.Done():
-						return
-					default:
-					}
+			// if IsLeaderChange(err) {
+			if err := c.svcDiscovery.CheckMemberChanged(); err != nil {
+				select {
+				case <-dispatcherCtx.Done():
+					return
+				default:
 				}
-				// Because the TSO Follower Proxy could be configured online,
-				// If we change it from on -> off, background updateTSOConnectionCtxs
-				// will cancel the current stream, then the EOF error caused by cancel()
-				// should not trigger the updateTSOConnectionCtxs here.
-				// So we should only call it when the leader changes.
-				c.updateTSOConnectionCtxs(dispatcherCtx, nodeName, &connectionCtxs)
 			}
+			// 	// Because the TSO Follower Proxy could be configured online,
+			// 	// If we change it from on -> off, background updateTSOConnectionCtxs
+			// 	// will cancel the current stream, then the EOF error caused by cancel()
+			// 	// should not trigger the updateTSOConnectionCtxs here.
+			// 	// So we should only call it when the leader changes.
+			c.updateTSOConnectionCtxs(dispatcherCtx, nodeName, &connectionCtxs)
+			// }
 		}
 	}
 }
@@ -542,6 +584,7 @@ func (c *taasClient) processTaasRequests(stream tsoStream, dcLocation string, tb
 	count := int64(len(requests))
 	physical, logical, suffixBits, err := stream.processRequests(c.svcDiscovery.GetClusterID(), dcLocation, requests, tbc.batchStartTime)
 	if err != nil {
+		log.Error("zghtag", zap.String("processTaasRequests failed", dcLocation))
 		c.finishTSORequest(requests, 0, 0, 0, err)
 		return err
 	}

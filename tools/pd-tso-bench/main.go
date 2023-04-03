@@ -108,7 +108,7 @@ func bench(mainCtx context.Context) {
 			CAPath:   *caPath,
 			CertPath: *certPath,
 			KeyPath:  *keyPath,
-		})
+		}, pd.WithClientTypeOption(*dcLocation))
 
 		pdCli.UpdateOption(pd.MaxTSOBatchWaitInterval, *maxBatchWaitInterval)
 		pdCli.UpdateOption(pd.EnableTSOFollowerProxy, *enableTSOFollowerProxy)
@@ -384,7 +384,7 @@ func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration) {
 			if err == nil {
 				break
 			}
-			log.Error(fmt.Sprintf("%v", err))
+			// log.Error(fmt.Sprintf("%v", err))
 			time.Sleep(sleepIntervalOnFailure)
 		}
 		if err != nil {

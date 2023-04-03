@@ -1,6 +1,4 @@
-module taas-proto
-
-go 1.20
+module gitlab.alibaba-inc.com/zelu.wjz/taasplugin
 
 require (
 	github.com/gogo/protobuf v1.3.2
@@ -21,3 +19,5 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v2 v2.2.3 // indirect
 )
+
+go 1.18

@@ -76,9 +76,7 @@ type Client interface {
 	// syncing leader from server.
 	GetLeaderAddr() string
 	GetTaasTS(ctx context.Context, dcLocation string, M int32) (physical int64, logical int64, err error)
-	TaasSend(ctx context.Context, dcLocation string, url string, sync Result, wg *sync.WaitGroup, errorchan chan<- int)
 	// GetRegion gets a region and its leader Peer from PD by key.
-	InitTaas(url string) error
 	// The region may expire after split. Caller is responsible for caching and
 	// taking care of region change.
 	// Also it may return nil if PD finds no Region for the key temporarily,
@@ -215,6 +213,13 @@ var (
 // ClientOption configures client.
 type ClientOption func(c *client)
 
+// WithClientTypeOption configures the client type.
+func WithClientTypeOption(clientType string) ClientOption {
+	return func(c *client) {
+		c.option.clientType = clientType
+	}
+}
+
 // WithGRPCDialOptions configures the client with gRPC dial options.
 func WithGRPCDialOptions(opts ...grpc.DialOption) ClientOption {
 	return func(c *client) {
@@ -277,6 +282,7 @@ type client struct {
 	pdSvcDiscovery  ServiceDiscovery
 	tokenDispatcher *tokenDispatcher
 
+	clientType string
 	// For service mode switching.
 	serviceModeKeeper
 	Cache sync.Map
@@ -408,10 +414,13 @@ func (c *client) setServiceMode(newMode pdpb.ServiceMode) {
 	)
 	switch newMode {
 	case pdpb.ServiceMode_PD_SVC_MODE:
-		newTSOCli = newTSOClient(c.ctx, c.option, c.keyspaceID,
+		if c.option.clientType == taasDCLocation {
+			newTaasCli = newTaasClient(c.ctx, c.option, c.keyspaceID,
 			c.pdSvcDiscovery, &pdTSOStreamBuilderFactory{})
-		newTaasCli = newTaasClient(c.ctx, c.option, c.keyspaceID,
+		} else {
+			newTSOCli = newTSOClient(c.ctx, c.option, c.keyspaceID,
 			c.pdSvcDiscovery, &pdTSOStreamBuilderFactory{})
+		}
 	case pdpb.ServiceMode_API_SVC_MODE:
 		newTSOSvcDiscovery = newTSOServiceDiscovery(c.ctx, MetaStorageClient(c),
 			c.GetClusterID(c.ctx), c.keyspaceID, c.svrUrls, c.tlsCfg, c.option)
@@ -422,24 +431,29 @@ func (c *client) setServiceMode(newMode pdpb.ServiceMode) {
 				zap.Strings("svr-urls", c.svrUrls), zap.String("current-mode", c.serviceMode.String()), zap.Error(err))
 			return
 		}
+	// case pdpb.ServiceMode_TAAS_SVC_MODE:
+	// 	newTaasCli = newTaasClient(c.ctx, c.option, c.keyspaceID,
+	// 		c.pdSvcDiscovery, &pdTSOStreamBuilderFactory{})
 	case pdpb.ServiceMode_UNKNOWN_SVC_MODE:
 		log.Warn("[pd] intend to switch to unknown service mode, just return")
 		return
 	}
-	newTSOCli.Setup()
-	// Replace the old TSO client.
-	oldTSOClient := c.getTSOClient()
-	c.tsoClient.Store(newTSOCli)
-	oldTSOClient.Close()
 	// Replace taas client
-	oldTaasClient := c.getTaasClient()
-	if newTaasCli != nil{
-		newTaasCli.Setup()
+	if c.option.clientType == taasDCLocation {
+		oldTaasClient := c.getTaasClient()
 		if oldTaasClient != nil {
 			oldTaasClient.Close()
 		}
+		newTaasCli.Setup()
 		c.taasClient.Store(newTaasCli)
+	} else {
+		newTSOCli.Setup()
+		// Replace the old TSO client.
+		oldTSOClient := c.getTSOClient()
+		c.tsoClient.Store(newTSOCli)
+		oldTSOClient.Close()
 	}
+
 	// Replace the old TSO service discovery if needed.
 	oldTSOSvcDiscovery := c.tsoSvcDiscovery
 	if newTSOSvcDiscovery != nil {
@@ -629,25 +643,7 @@ type Result struct {
 	Low  int64
 }
 
-// var Cache map[string]Result
-func (c *client) InitTaas(url string) error {
-	//fmt.Println(url)
 
-	tsoClient := c.getTSOClient()
-	conn, err := c.pdSvcDiscovery.GetOrCreateGRPCConn(url)
-	if err != nil {
-		return err
-	}
-	cctx, cancel := context.WithCancel(context.Background())
-	//timeout:=c.option.timeout
-	tempStream, err := tsoClient.TsoStreamBuilderFactory.makeBuilder(conn).buildTaas(cctx, cancel, c.option.timeout)
-	if err != nil {
-		return nil
-	}
-	c.taasMap[url] = tempStream
-	c.clusterid = tsoClient.svcDiscovery.GetClusterID()
-	return nil
-}
 func (c *client) GetTaasTSAsync(ctx context.Context, dcLocation string, M int32) TSFuture {
 	req := tsoReqPool.Get().(*tsoRequest)
 	req.requestCtx = ctx
@@ -676,39 +672,6 @@ func (c *client) GetTaasTSAsync(ctx context.Context, dcLocation string, M int32)
 func (c *client) GetTaasTS(ctx context.Context, dcLocation string, M int32) (physical int64, logical int64, err error) {
 	resp := c.GetTaasTSAsync(ctx, dcLocation, M)
 	return resp.Wait()
-}
-
-func (c *client) TaasSend(ctx context.Context, dcLocation string, url string, sync Result, wg *sync.WaitGroup, errorchan chan<- int) {
-	defer wg.Done()
-	tsoClient := c.getTSOClient()
-	conn, err := c.pdSvcDiscovery.GetOrCreateGRPCConn(url)
-	cctx, cancel := context.WithCancel(context.Background())
-	taasStream, err := tsoClient.TsoStreamBuilderFactory.makeBuilder(conn).buildTaas(cctx, cancel, c.option.timeout)
-	if err != nil {
-		//log.Error("connection error", zap.String("member-URL", url), errs.ZapError(err))
-		errorchan <- 1
-		return
-	}
-
-	req := tsoReqPool.Get().(*tsoRequest)
-	if sync.High != -1 {
-		req.physical = sync.High
-		req.logical = sync.Low
-	}
-	req.requestCtx = ctx
-	req.clientCtx = c.ctx
-	req.dcLocation = dcLocation
-	req.keyspaceID = 3
-	batchStartTime := time.Now()
-
-	tTsoRequest := []*tsoRequest{req}
-	p, s, _, r := taasStream.processRequests(c.clusterid, dcLocation, tTsoRequest, batchStartTime)
-	if r != nil {
-		errorchan <- 1
-		return
-	}
-	c.Cache.Store(url, []int64{p, s})
-	return
 }
 
 func (c *client) GetLocalTSAsync(ctx context.Context, dcLocation string) TSFuture {
