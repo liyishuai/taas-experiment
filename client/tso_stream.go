@@ -23,6 +23,9 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/pingcap/kvproto/pkg/tsopb"
+	"github.com/pingcap/log"
+	// "go.uber.org/zap"
+
 	// "github.com/pingcap/log"
 	"github.com/tikv/pd/client/errs"
 	"google.golang.org/grpc"
@@ -229,7 +232,12 @@ type pdTaasStream struct {
 
 func (s *pdTaasStream) processRequests(clusterID uint64, nodeName string, requests []*tsoRequest,
 	batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error) {
-		// log.Info("zghtag: processRequests")
+		reqLowerBound := int64(0)
+		for _, req := range(requests) {
+			if req.physical > reqLowerBound {
+				reqLowerBound = req.physical
+			}
+		}
 		start := time.Now()
 		count := int64(len(requests))
 		req := &pdpb.TaasRequest{
@@ -238,11 +246,10 @@ func (s *pdTaasStream) processRequests(clusterID uint64, nodeName string, reques
 			},
 			Timestamp: &pdpb.Timestamp{
 				Logical: int64(0),
-				Physical: int64(0),
+				Physical: reqLowerBound,
 				SuffixBits:uint32(0),
-				
 			},
-			Count:      uint32(count),
+			Count:      uint32(1),
 			DcLocation: taasDCLocation,
 		}
 		if err = s.stream.Send(req); err != nil {
@@ -267,12 +274,14 @@ func (s *pdTaasStream) processRequests(clusterID uint64, nodeName string, reques
 		tsoBatchSize.Observe(float64(count))
 	
 		if resp.GetCount() != uint32(count) {
-			err = errors.WithStack(errTSOLength)
-			return
+			// log.Error("zghtag", zap.Uint32("taasTSOStream", resp.GetCount()))
+			// err = errors.WithStack(errTSOLength)
+			// return
 		}
 	
 		physical, logical, suffixBits = resp.GetTimestamp().GetPhysical(), resp.GetTimestamp().GetLogical(), resp.GetTimestamp().GetSuffixBits()
-		return
+		// log.Info("zghtag: use pdTaasStream", zap.Int64("taasTSOStream", physical))
+		return 
 
 }
 
@@ -281,5 +290,6 @@ type taasTSOStream struct {
 }
 func (s *taasTSOStream) processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
 	batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error) {
+		log.Info("zghtag: use taasTSOStream")
    		return 0,0,0,nil
 }

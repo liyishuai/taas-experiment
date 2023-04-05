@@ -99,3 +99,8 @@ func (tta *TaasTSOAllocator) getCurrentTSO() (pdpb.Timestamp, error) {
 func (tta *TaasTSOAllocator) Reset() {
 	tta.taasNode.SyncTimestamp()
 }
+
+// For taas
+func (tta *TaasTSOAllocator) GenerateTaasTSO(count uint32, ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
+	return tta.taasNode.generateTaasTSO(count, ts)
+}

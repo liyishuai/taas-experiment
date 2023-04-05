@@ -658,10 +658,10 @@ func (c *client) GetTaasTSAsync(ctx context.Context, dcLocation string, M int32)
 	// log.Info("zghtag: start dispatch taas req")
 	if err := taasClient.dispatchRequest(dcLocation, req); err != nil {
 		// Wait for a while and try again
-		time.Sleep(50 * time.Millisecond)
-		if err = taasClient.dispatchRequest(dcLocation, req); err != nil {
-			req.done <- err
-		}
+		// time.Sleep(50 * time.Millisecond)
+		// if err = taasClient.dispatchRequest(dcLocation, req); err != nil {
+		// 	req.done <- err
+		// }
 	}
 	return req
 }

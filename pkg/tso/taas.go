@@ -107,6 +107,28 @@ func (t *taasNode) generateTSO(count uint32) (pdpb.Timestamp, error) {
 	return *timestamp, nil
 }
 
+func (t *taasNode) generateTaasTSO(count uint32, ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
+	t.taasMux.Lock()
+	defer t.taasMux.Unlock()
+	// log.Info("zghtag", zap.Int64("taas generate tso", t.taasMux.tsHigh))
+
+	newTaasLevel := t.taasMux.tsHigh + int64(count)
+	if newTaasLevel <= ts.Physical {
+		newTaasLevel = ts.Physical + 1
+	}
+	if newTaasLevel + taasLimitWarningLevel > t.taasMux.tsLimit  {
+		// log.Info("TaasTag", zap.Int64("taas high", t.taasMux.tsHigh), zap.Int64("taas limit", t.taasMux.tsLimit))
+		t.UpdateTaasLimit(newTaasLevel + taasLimitUpdateLevel)
+	}
+	t.taasMux.tsHigh = newTaasLevel
+	timestamp := &pdpb.Timestamp{
+		Physical:   t.taasMux.tsHigh,
+		Logical:    t.taasMux.tsLow,
+		SuffixBits: 0,
+	}
+	return *timestamp, nil
+}
+
 func (t *taasNode) getTimestampPath() string {
 	return path.Join(t.ttsPath, timestampKey)
 }

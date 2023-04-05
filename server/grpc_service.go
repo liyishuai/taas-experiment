@@ -222,7 +222,7 @@ func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
 		}
 		count := request.GetCount()
 		// log.Info("zghtag", zap.String("request", fmt.Sprintf("%s", request.String())))
-		ts, err := s.taasAllocatorManager.HandleTSORequest(request.GetDcLocation(), count)
+		ts, err := s.taasAllocatorManager.HandleTaasRequest(count, request.Timestamp)
 		// log.Info("zghtag", zap.String("timestamp", ts.String()))
 		if err != nil {
 			return status.Errorf(codes.Unknown, err.Error())

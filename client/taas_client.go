@@ -32,7 +32,7 @@ import (
 
 type TaasCache struct {
 	cacheData map[string]*pdpb.Timestamp
-	cacheLock sync.Mutex
+	cacheLock sync.RWMutex
 }
 type taasClient struct {
 	N      int

@@ -236,3 +236,9 @@ func (lta *LocalTSOAllocator) WatchAllocatorLeader(serverCtx context.Context, al
 	lta.leadership.Watch(serverCtx, revision)
 	lta.unsetAllocatorLeader()
 }
+
+// For taas
+func (lta *LocalTSOAllocator) GenerateTaasTSO(count uint32, ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
+	log.Error("taas", zap.String("LocalTSOAllocator", "unused method called"))
+	return pdpb.Timestamp{}, nil
+}

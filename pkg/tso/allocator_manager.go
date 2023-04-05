@@ -1020,6 +1020,17 @@ func (am *AllocatorManager) HandleTSORequest(dcLocation string, count uint32) (p
 	return allocatorGroup.allocator.GenerateTSO(count)
 }
 
+// HandleTSORequest forwards TSO allocation requests to correct TSO Allocators.
+func (am *AllocatorManager) HandleTaasRequest(count uint32, ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
+
+	allocatorGroup, exist := am.getAllocatorGroup(TaaSLocation)
+	if !exist {
+		err := errs.ErrGetAllocator.FastGenByArgs(fmt.Sprintf("%s allocator not found, generate timestamp failed", TaaSLocation))
+		return pdpb.Timestamp{}, err
+	}
+	return allocatorGroup.allocator.GenerateTaasTSO(count, ts)
+}
+
 // ResetAllocatorGroup will reset the allocator's leadership and TSO initialized in memory.
 // It usually should be called before re-triggering an Allocator leader campaign.
 func (am *AllocatorManager) ResetAllocatorGroup(dcLocation string) {
@@ -1053,7 +1064,7 @@ func (am *AllocatorManager) getAllocatorGroup(dcLocation string) (*allocatorGrou
 	am.mu.RLock()
 	defer am.mu.RUnlock()
 	allocatorGroup, exist := am.mu.allocatorGroups[dcLocation]
-	log.Info("zghtag", zap.Bool("getAllocatorGroup exist", exist))
+	// log.Info("zghtag", zap.Bool("getAllocatorGroup exist", exist))
 	return allocatorGroup, exist
 }
 

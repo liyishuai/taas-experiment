@@ -91,6 +91,7 @@ func (req *tsoRequest) Wait() (physical int64, logical int64, err error) {
 	cmdDurationTSOAsyncWait.Observe(start.Sub(req.start).Seconds())
 	select {
 	case err = <-req.done:
+		// log.Info("req done", zap.Int64("req", req.physical))
 		err = errors.WithStack(err)
 		defer tsoReqPool.Put(req)
 		if err != nil {

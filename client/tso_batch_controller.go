@@ -17,6 +17,9 @@ package pd
 import (
 	"context"
 	"time"
+
+	// "github.com/pingcap/log"
+	// "go.uber.org/zap"
 )
 
 type tsoBatchController struct {
@@ -49,6 +52,7 @@ func (tbc *tsoBatchController) fetchPendingRequests(ctx context.Context, maxBatc
 	case <-ctx.Done():
 		return ctx.Err()
 	case firstTSORequest = <-tbc.tsoRequestCh:
+		// log.Info("firstTSORequest", zap.String("node", firstTSORequest.nodeName))
 	}
 	// Start to batch when the first TSO request arrives.
 	tbc.batchStartTime = time.Now()
