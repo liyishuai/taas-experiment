@@ -50,6 +50,7 @@ type tsoRequest struct {
 	logical    int64
 	keyspaceID uint32
 	dcLocation string
+	nodeName   string
 }
 
 var tsoReqPool = sync.Pool{

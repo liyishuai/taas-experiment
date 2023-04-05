@@ -30,6 +30,8 @@ import (
 )
 
 type taasClient struct {
+	N 	   int
+	M      int
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup

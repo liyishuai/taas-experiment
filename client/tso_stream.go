@@ -145,7 +145,6 @@ func (s *pdTSOStream) processRequests(clusterID uint64, dcLocation string, reque
 		Count:      uint32(count),
 		DcLocation: dcLocation,
 	}
-	//fmt.Println("my code run Count pd pdtsosstream %d", uint32(count))
 	if err = s.stream.Send(req); err != nil {
 		if err == io.EOF {
 			err = errs.ErrClientTSOStreamClosed
@@ -228,7 +227,7 @@ type pdTaasStream struct {
 	stream pdpb.PD_TaasClient
 }
 
-func (s *pdTaasStream) processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
+func (s *pdTaasStream) processRequests(clusterID uint64, nodeName string, requests []*tsoRequest,
 	batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error) {
 		// log.Info("zghtag: processRequests")
 		start := time.Now()
@@ -237,16 +236,14 @@ func (s *pdTaasStream) processRequests(clusterID uint64, dcLocation string, requ
 			Header: &pdpb.RequestHeader{
 				ClusterId: clusterID,
 			},
-			/*Timestamp: Timestamp{
+			Timestamp: &pdpb.Timestamp{
 				Logical: int64(0),
 				Physical: int64(0),
 				SuffixBits:uint32(0),
 				
 			},
-			*/
-			//Timestamp.Logical:1,
 			Count:      uint32(count),
-			DcLocation: dcLocation,
+			DcLocation: taasDCLocation,
 		}
 		if err = s.stream.Send(req); err != nil {
 			if err == io.EOF {

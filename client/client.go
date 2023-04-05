@@ -431,9 +431,6 @@ func (c *client) setServiceMode(newMode pdpb.ServiceMode) {
 				zap.Strings("svr-urls", c.svrUrls), zap.String("current-mode", c.serviceMode.String()), zap.Error(err))
 			return
 		}
-	// case pdpb.ServiceMode_TAAS_SVC_MODE:
-	// 	newTaasCli = newTaasClient(c.ctx, c.option, c.keyspaceID,
-	// 		c.pdSvcDiscovery, &pdTSOStreamBuilderFactory{})
 	case pdpb.ServiceMode_UNKNOWN_SVC_MODE:
 		log.Warn("[pd] intend to switch to unknown service mode, just return")
 		return
