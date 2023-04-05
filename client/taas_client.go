@@ -22,6 +22,7 @@ import (
 	// "time"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/client/errs"
 	"go.uber.org/zap"
@@ -29,16 +30,20 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
+type TaasCache struct {
+	cacheData map[string]*pdpb.Timestamp
+	cacheLock sync.Mutex
+}
 type taasClient struct {
-	N 	   int
+	N      int
 	M      int
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 	option *option
 
-	taasCache  sync.Map // store latest timestamp of each taas node
-	twg        sync.WaitGroup
+	taasCache TaasCache // store latest timestamp of each taas node
+	twg       sync.WaitGroup
 
 	keyspaceID   uint32
 	svcDiscovery ServiceDiscovery
@@ -69,9 +74,12 @@ func newTaasClient(
 ) *taasClient {
 	ctx, cancel := context.WithCancel(ctx)
 	c := &taasClient{
-		ctx:                       ctx,
-		cancel:                    cancel,
-		option:                    option,
+		ctx:    ctx,
+		cancel: cancel,
+		option: option,
+		taasCache: TaasCache{
+			cacheData: make(map[string]*pdpb.Timestamp),
+		},
 		keyspaceID:                keyspaceID,
 		svcDiscovery:              svcDiscovery,
 		TsoStreamBuilderFactory:   factory,
@@ -127,7 +135,7 @@ func (c *taasClient) GetTaasAllocators() *sync.Map {
 	return &c.tsoAllocators
 }
 
-// GetTaasAllocatorServingAddrByNodeName returns the tso allocator of the given taas node name 
+// GetTaasAllocatorServingAddrByNodeName returns the tso allocator of the given taas node name
 func (c *taasClient) GetTaasAllocatorServingAddrByNodeName(nodeName string) (string, bool) {
 	url, exist := c.tsoAllocators.Load(nodeName)
 	if !exist {

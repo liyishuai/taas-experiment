@@ -50,6 +50,7 @@ type taasRespEvent struct {
 	err       error
 }
 
+
 const (
 	InvalidTimestamp 	 = 0
 	TopTimestamp     	 = math.MaxInt64
@@ -91,6 +92,12 @@ func (c *taasClient) singleDispatch(dispatcher *taasDispatcher, req *tsoRequest,
 					},
 				}
 				log.Info("zghtag Dispatch Done", zap.Int64(tResp.nodeName, tResp.timestamp.Physical))
+				c.taasCache.cacheLock.Lock()
+				if CompareTimestamp(c.taasCache.cacheData[req.nodeName], &tResp.timestamp) == -1 {
+					c.taasCache.cacheData[req.nodeName] = &tResp.timestamp
+				}
+				c.taasCache.cacheLock.Unlock()
+
 				sessionChan <- &tResp 
 			} else {
 				tResp = taasRespEvent{
@@ -139,7 +146,7 @@ func GetMthSmallestTS(sessionInfo map[string]*pdpb.Timestamp, M int) *pdpb.Times
 func CountGEMthSmallestTS(sessionInfo map[string]*pdpb.Timestamp, Mth *pdpb.Timestamp) int {
 	cnt := 0
 	for _, ts := range sessionInfo {
-		if CompareTimestamp(ts, Mth) == 1 {
+		if CompareTimestamp(ts, Mth) >= 0 {
 			cnt ++
 		}
 	}
@@ -161,6 +168,7 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 	c.taasDispatcher.Range(func(nodeNameKey, dc interface{}) bool {
 		nodeName := nodeNameKey.(string)
 		if !c.checkTaasDispatcher(nodeName) {
+			log.Fatal("taas dispatcher not found")
 			c.createTaasDispatcher(nodeName)
 		}
 		tRequest := request
@@ -173,15 +181,13 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 		return true
 	})
 
-	// slowPathTicker := time.NewTicker(DefaultFastPathTimeout)
-	// defer ticker.Stop()	
 	for e := range sessionCh {
 		if e.err != nil {
 			continue
 		}
 		tNodeName := e.nodeName
 		log.Info("zghtag update", zap.Int64(tNodeName, e.timestamp.Physical))
-		if CompareTimestamp(&e.timestamp, sessionInfo[tNodeName]) == 1 {
+		if CompareTimestamp(&e.timestamp, sessionInfo[tNodeName]) == -1 {
 			sessionInfo[tNodeName] = &e.timestamp
 		}
 		candidate := GetMthSmallestTS(sessionInfo, c.M)
@@ -189,11 +195,11 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 
 		if candidate.Physical < TopTimestamp {
 			log.Info("zghtag fastpath check", zap.Int64("sessionCh len", int64(len(sessionCh))))
-			if CountGEMthSmallestTS(sessionInfo, candidate) > c.N - c.M {
+			if CountGEMthSmallestTS(c.taasCache.cacheData, candidate) > c.N - c.M {
 				request.physical = candidate.Physical
 				request.logical  = candidate.Logical
 				request.done <- nil
-			} else if len(sessionCh) == 0 || !slowPathBroadcasted {
+			} else if len(sessionCh) == 0 && !slowPathBroadcasted {
 				log.Info("zghtag slowpath ", zap.Bool("slowPathBroadcasted", slowPathBroadcasted))
 				for nodeName, ts := range(sessionInfo){
 					if CompareTimestamp(ts, candidate) == -1 {
@@ -223,8 +229,8 @@ func (c *taasClient) updateTSODispatcher() {
 	count := 0
 	c.GetTaasAllocators().Range(func(nodeNameKey, _ interface{}) bool {
 		nodeName := nodeNameKey.(string)
-		log.Info("zghtag", zap.String("tsoClientCreate nodeName", nodeName))
 		if nodeNameKey != globalDCLocation && !c.checkTaasDispatcher(nodeName) {
+			log.Info("zghtag", zap.String("tsoClientCreate nodeName", nodeName))
 			c.createTaasDispatcher(nodeName)
 		}
 		count ++
