@@ -97,6 +97,12 @@ func (t *taasNode) getTSO() (pdpb.Timestamp, error) {
 	return *timestamp, nil
 }
 
+// Unused 
+func (t *taasNode) generateTSO(count uint32)  (pdpb.Timestamp, error) {
+	log.Error("zghtag", zap.Int64("unused api", t.taasMux.tsHigh))
+	return pdpb.Timestamp{}, nil
+}
+
 func (t *taasNode) generateTaasTSO(count uint32, ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
 	t.taasMux.Lock()
 	defer t.taasMux.Unlock()

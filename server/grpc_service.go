@@ -212,7 +212,6 @@ func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
 			return errors.WithStack(err)
 		}
 
-		// start := time.Now()
 		// TSO uses leader lease to determine validity. No need to check leader here.
 		if s.IsClosed() {
 			return status.Errorf(codes.Unknown, "server not started")
@@ -222,15 +221,23 @@ func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
 		}
 		count := request.GetCount()
 		// log.Info("zghtag", zap.String("request", fmt.Sprintf("%s", request.String())))
-		ts, err := s.taasAllocatorManager.HandleTaasRequest(count, request.Timestamp)
+		respTsList := make([]*pdpb.Timestamp, len(request.GetTimestamps()))
+		for i, reqTs := range(request.GetTimestamps()){
+			ts, err := s.taasAllocatorManager.HandleTaasRequest(1, reqTs)
+			respTsList[i] = &ts
+			if err != nil {
+				log.Error("zghtag", zap.String("get taas ts failed", reqTs.String()))
+			}
+		}
+		// ts, err := s.taasAllocatorManager.HandleTaasRequest(count, request.Timestamp)
 		// log.Info("zghtag", zap.String("timestamp", ts.String()))
 		if err != nil {
 			return status.Errorf(codes.Unknown, err.Error())
 		}
 		// tsoHandleDuration.Observe(time.Since(start).Seconds())
-		response := &pdpb.TsoResponse{
+		response := &pdpb.TaasResponse{
 			Header:    s.header(),
-			Timestamp: &ts,
+			Timestamps: respTsList,
 			Count:     count,
 		}
 		// log.Info("zghtag", zap.String("return tso-resp", response.String()))	

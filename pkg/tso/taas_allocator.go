@@ -97,7 +97,7 @@ func (tta *TaasTSOAllocator) getCurrentTSO() (pdpb.Timestamp, error) {
 
 // Reset is used to reset the TSO allocator.
 func (tta *TaasTSOAllocator) Reset() {
-	tta.taasNode.SyncTimestamp()
+	tta.taasNode.reserveTaasLimit(0)
 }
 
 // For taas
