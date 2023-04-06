@@ -26,7 +26,7 @@ service PD {
     rpc GetMembers(GetMembersRequest) returns (GetMembersResponse) {}
 
     rpc Tso(stream TsoRequest) returns (stream TsoResponse) {}
-    rpc Taas(stream TaasRequest) returns (stream TsoResponse) {}
+    rpc Taas(stream TaasRequest) returns (stream TaasResponse) {}
 
     rpc Bootstrap(BootstrapRequest) returns (BootstrapResponse) {}
 
@@ -193,7 +193,7 @@ message TsoRequest {
 }
 message TaasRequest {
     RequestHeader header = 1;
-    Timestamp timestamp = 2;
+    repeated Timestamp timestamps = 2;
     uint32 count = 3;
     string dc_location = 4;
 }
@@ -211,6 +211,13 @@ message TsoResponse {
 
     uint32 count = 2;
     Timestamp timestamp = 3;
+}
+
+message TaasResponse {
+    ResponseHeader header = 1;
+
+    uint32 count = 2;
+    repeated Timestamp timestamps = 3;
 }
 
 message BootstrapRequest {

@@ -510,7 +510,7 @@ tsoBatchLoop:
 					err = errs.ErrClientCreateTSOStream.FastGenByArgs(errs.RetryTimeoutErr)
 					log.Error("[tso] create tso stream error", zap.String("nodeName", nodeName), errs.ZapError(err))
 					c.svcDiscovery.ScheduleCheckMemberChanged()
-					c.finishTSORequest(tbc.getCollectedRequests(), 0, 0, 0, errors.WithStack(err))
+					c.finishTSORequest(tbc.getCollectedRequests(), []int64{}, []int64{}, errors.WithStack(err))
 					continue tsoBatchLoop
 				case <-time.After(retryInterval):
 					continue streamChoosingLoop
@@ -672,61 +672,28 @@ func (c *taasClient) tryConnectToTaas(dispatcherCtx context.Context, dc string, 
 // }
 
 func (c *taasClient) processTaasRequests(stream tsoStream, nodeName string, tbc *tsoBatchController) error {
-	// if len(opts) > 0 {
-	// 	span := opentracing.StartSpan("pdclient.processTSORequests", opts...)
-	// 	defer span.Finish()
-	// }
-
 	requests := tbc.getCollectedRequests()
 	// count := int64(len(requests))
-	physical, logical, suffixBits, err := stream.processRequests(c.svcDiscovery.GetClusterID(), nodeName, requests, tbc.batchStartTime)
+	physical, logical, err := stream.processTaasRequests(c.svcDiscovery.GetClusterID(), nodeName, requests, tbc.batchStartTime)
 	if err != nil {
 		log.Error("zghtag", zap.String("processTaasRequests failed", nodeName))
-		c.finishTSORequest(requests, 0, 0, 0, err)
+		c.finishTSORequest(requests, []int64{}, []int64{}, err)
 		return err
 	}
-	// fmt.Println(requests[0].nodeName, tbc)
-	// log.Info("zghtag processTaasRequests", zap.Int64(requests[0].nodeName, physical))
-	// `logical` is the largest ts's logical part here, we need to do the subtracting before we finish each TSO request.
-	// firstLogical := addLogical(logical, -count+1, suffixBits)
-	firstLogical := logical
-	// c.compareAndSwapTS(nodeName, physical, firstLogical, suffixBits, count)
-	c.finishTSORequest(requests, physical, firstLogical, suffixBits, nil)
+	c.finishTSORequest(requests, physical, logical, nil)
 	return nil
 }
 
-func (c *taasClient) compareAndSwapTS(nodeName string, physical, firstLogical int64, suffixBits uint32, count int64) {
-	largestLogical := addLogical(firstLogical, count-1, suffixBits)
-	lastTSOInterface, loaded := c.lastTSMap.LoadOrStore(nodeName, &lastTSO{
-		physical: physical,
-		// Save the largest logical part here
-		logical: largestLogical,
-	})
-	if !loaded {
-		return
-	}
-	lastTSOPointer := lastTSOInterface.(*lastTSO)
-	lastPhysical := lastTSOPointer.physical
-	lastLogical := lastTSOPointer.logical
-	// FIXME:zgh fix the taas logic
-	// The TSO we get is a range like [largestLogical-count+1, largestLogical], so we save the last TSO's largest logical to compare with the new TSO's first logical.
-	// For example, if we have a TSO resp with logical 10, count 5, then all TSOs we get will be [6, 7, 8, 9, 10].
-	if tsLessEqual(physical, firstLogical, lastPhysical, lastLogical) {
-		// panic(errors.Errorf("%s timestamp fallback, newly acquired ts (%d, %d) is less or equal to last one (%d, %d)",
-		// 	dcLocation, physical, firstLogical, lastPhysical, lastLogical))
-	}
-	lastTSOPointer.physical = physical
-	// Same as above, we save the largest logical part here.
-	lastTSOPointer.logical = largestLogical
-}
-
-func (c *taasClient) finishTSORequest(requests []*tsoRequest, physical, firstLogical int64, suffixBits uint32, err error) {
-	for i := 0; i < len(requests); i++ {
-		// if span := opentracing.SpanFromContext(requests[i].requestCtx); span != nil {
-		// 	span.Finish()
-		// }
-		// log.Info("zghtag finishTSO", zap.Int64(requests[0].nodeName, physical))
-		requests[i].physical, requests[i].logical = physical, firstLogical
-		requests[i].done <- err
+func (c *taasClient) finishTSORequest(requests []*tsoRequest, physical, logical []int64, err error) {
+	if len(physical) != len(requests) || len(logical) != len(requests) {
+		log.Error("zghtag", zap.Int("finishTSORequest len", len(physical)))
+		for i := 0; i < len(requests); i++ {
+			requests[i].done <- err
+		}
+	} else {
+		for i := 0; i < len(requests); i++ {
+			requests[i].physical, requests[i].logical = physical[i], logical[i]
+			requests[i].done <- err
+		}
 	}
 }

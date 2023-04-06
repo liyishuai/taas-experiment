@@ -131,6 +131,8 @@ type tsoStream interface {
 	// processRequests processes TSO requests in streaming mode to get timestamps
 	processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
 		batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error)
+	processTaasRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
+		batchStartTime time.Time) (physical, logical []int64, err error)
 }
 
 type pdTSOStream struct {
@@ -226,17 +228,34 @@ func (s *tsoTSOStream) processRequests(clusterID uint64, dcLocation string, requ
 	return
 }
 
+func (s *pdTSOStream) processTaasRequests(clusterID uint64, nodeName string, requests []*tsoRequest,
+	batchStartTime time.Time) (physical, logical []int64, err error) {
+		return []int64{}, []int64{}, nil 
+}
+
+func (s *tsoTSOStream) processTaasRequests(clusterID uint64, nodeName string, requests []*tsoRequest,
+	batchStartTime time.Time) (physical, logical []int64, err error) {
+		return []int64{}, []int64{}, nil 
+}
+
 type pdTaasStream struct {
 	stream pdpb.PD_TaasClient
 }
 
-func (s *pdTaasStream) processRequests(clusterID uint64, nodeName string, requests []*tsoRequest,
+func (s *pdTaasStream) processRequests(clusterID uint64, dcLocation string, requests []*tsoRequest,
 	batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error) {
-		reqLowerBound := int64(0)
+		return
+	}
+
+func (s *pdTaasStream) processTaasRequests(clusterID uint64, nodeName string, requests []*tsoRequest,
+	batchStartTime time.Time) (physical, logical []int64, err error) {
+		var tsList []*pdpb.Timestamp
 		for _, req := range(requests) {
-			if req.physical > reqLowerBound {
-				reqLowerBound = req.physical
-			}
+			tsList = append(tsList, &pdpb.Timestamp{
+				Logical: int64(0),
+				Physical: req.physical,
+				SuffixBits:uint32(0),
+			})
 		}
 		start := time.Now()
 		count := int64(len(requests))
@@ -244,11 +263,7 @@ func (s *pdTaasStream) processRequests(clusterID uint64, nodeName string, reques
 			Header: &pdpb.RequestHeader{
 				ClusterId: clusterID,
 			},
-			Timestamp: &pdpb.Timestamp{
-				Logical: int64(0),
-				Physical: reqLowerBound,
-				SuffixBits:uint32(0),
-			},
+			Timestamps: tsList,
 			Count:      uint32(1),
 			DcLocation: taasDCLocation,
 		}
@@ -273,16 +288,11 @@ func (s *pdTaasStream) processRequests(clusterID uint64, nodeName string, reques
 		requestDurationTSO.Observe(time.Since(start).Seconds())
 		tsoBatchSize.Observe(float64(count))
 	
-		if resp.GetCount() != uint32(count) {
-			// log.Error("zghtag", zap.Uint32("taasTSOStream", resp.GetCount()))
-			// err = errors.WithStack(errTSOLength)
-			// return
+		for _, resp := range(resp.GetTimestamps()) {
+			physical = append(physical, resp.GetPhysical())
+			logical  = append(logical,  resp.GetLogical())
 		}
-	
-		physical, logical, suffixBits = resp.GetTimestamp().GetPhysical(), resp.GetTimestamp().GetLogical(), resp.GetTimestamp().GetSuffixBits()
-		// log.Info("zghtag: use pdTaasStream", zap.Int64("taasTSOStream", physical))
 		return 
-
 }
 
 type taasTSOStream struct {
@@ -292,4 +302,10 @@ func (s *taasTSOStream) processRequests(clusterID uint64, dcLocation string, req
 	batchStartTime time.Time) (physical, logical int64, suffixBits uint32, err error) {
 		log.Info("zghtag: use taasTSOStream")
    		return 0,0,0,nil
+}
+
+func (s *taasTSOStream) processTaasRequests(clusterID uint64, nodeName string, requests []*tsoRequest,
+	batchStartTime time.Time) (physical, logical []int64, err error) {
+		log.Info("zghtag: use taasTSOStream")
+		return 
 }

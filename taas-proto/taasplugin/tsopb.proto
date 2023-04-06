@@ -15,7 +15,7 @@ option java_package = "org.tikv.kvproto";
 
 service TSO {
     rpc Tso(stream TsoRequest) returns (stream TsoResponse) {}
-    rpc Taas(stream TaaSRequest) returns (stream TsoResponse) {}
+    rpc Taas(stream TaaSRequest) returns (stream TaasResponse) {}
 }
 
 message RequestHeader {
@@ -72,6 +72,12 @@ message TsoResponse {
 
     uint32 count = 2;
     pdpb.Timestamp timestamp = 3;
+}
+message TaasResponse {
+    ResponseHeader header = 1;
+
+    uint32 count = 2;
+    repeated pdpb.Timestamp timestamps = 3;
 }
 
 message Participant {
