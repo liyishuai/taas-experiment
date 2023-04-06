@@ -52,10 +52,10 @@ type taasRespEvent struct {
 }
 
 const (
-	InvalidTimestamp       = 0
-	TopTimestamp           = math.MaxInt64
-	DefaultTaasRpcTimeout  = 5000 * time.Microsecond // 0.5ms for taas rpc timeout
-	DefaultFastPathTimeout = 5000 * time.Microsecond // 0.5ms for taas rpc timeout
+	BottomTimestamp        int64         = 0
+	TopTimestamp           int64         = math.MaxInt64
+	DefaultTaasRpcTimeout  time.Duration = 5000 * time.Microsecond // 0.5ms for taas rpc timeout
+	DefaultFastPathTimeout time.Duration = 5000 * time.Microsecond // 0.5ms for taas rpc timeout
 
 )
 
@@ -105,11 +105,11 @@ func (c *taasClient) singleDispatch(dispatcher *taasDispatcher, req *tsoRequest,
 				}
 				log.Info("zghtag Dispatch Err", zap.Int64(tResp.nodeName, tResp.timestamp.Physical))
 			}
-		// case <- ticker.C:
-		// 	tResp = taasRespEvent{
-		// 		nodeName: req.nodeName,
-		// 		err:      grpc.ErrClientConnTimeout,
-		// 	}
+			// case <- ticker.C:
+			// 	tResp = taasRespEvent{
+			// 		nodeName: req.nodeName,
+			// 		err:      grpc.ErrClientConnTimeout,
+			// 	}
 		}
 		// sessionChan <- &tResp
 	}
