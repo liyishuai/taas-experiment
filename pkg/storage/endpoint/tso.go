@@ -31,7 +31,7 @@ type TSOStorage interface {
 	LoadTimestamp(prefix string) (time.Time, error)
 	SaveTimestamp(key string, ts time.Time) error
 	LoadTaasTimestamp(prefix string) (int64, error)
-	SaveTaasTimestamp(key string, ts int64) error
+	BumpTaasTimestamp(key string, ts int64) error
 }
 
 // for Taas timestamp interface check
@@ -112,7 +112,7 @@ func (se *StorageEndpoint) LoadTaasTimestamp(prefix string) (int64, error) {
 			log.Error("parse timestamp window that from etcd failed", zap.String("ts-window-key", key), zap.Error(err))
 			continue
 		}
-		if ts > maxTs{
+		if ts > maxTs {
 			maxTs = ts
 		}
 
@@ -120,26 +120,27 @@ func (se *StorageEndpoint) LoadTaasTimestamp(prefix string) (int64, error) {
 	return int64(maxTs), nil
 }
 
-// SaveTimestamp saves the timestamp to the storage.
-func (se *StorageEndpoint) SaveTaasTimestamp(key string, ts int64) error {
+// TickTimestamp saves the timestamp to the storage.
+func (se *StorageEndpoint) BumpTaasTimestamp(key string, ts int64) error {
 	return se.RunInTxn(context.Background(), func(txn kv.Txn) error {
 		value, err := txn.Load(key)
 		if err != nil {
 			return err
-		}
-		previousTS := uint64(0)
-		if value != "" {
-			previousTS, err = typeutil.BytesToUint64([]byte(value))
-			if err != nil {
-				log.Error("parse timestamp failed", zap.String("key", key), zap.String("value", value), zap.Error(err))
-				return err
+		} else {
+			previousTS := uint64(0)
+			if value != "" {
+				previousTS, err = typeutil.BytesToUint64([]byte(value))
+				if err != nil {
+					log.Error("parse timestamp failed", zap.String("key", key), zap.String("value", value), zap.Error(err))
+					return err
+				}
 			}
+			if int64(previousTS) > ts {
+				log.Info("TaasTag: previous ts > current limit", zap.Int64("previousTS", int64(previousTS)), zap.Int64("cur", ts))
+				return nil
+			}
+			data := typeutil.Uint64ToBytes(uint64(ts))
+			return txn.Save(key, string(data))
 		}
-		if int64(previousTS) > ts {
-			log.Info("TaasTag: previous ts > current limit", zap.Int64("previousTS", int64(previousTS)), zap.Int64("cur", ts))
-			return nil
-		}
-		data := typeutil.Uint64ToBytes(uint64(ts))
-		return txn.Save(key, string(data))
 	})
 }
