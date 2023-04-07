@@ -60,19 +60,21 @@ var (
 )
 
 func (t *taasNode) setTaasHigh(syncTs int64) error {
-	if syncTs > t.taasMux.tsLimit {
-		t.reservationLock.Lock()
+	if syncTs > t.taasMux.tsHigh {
 		if syncTs > t.taasMux.tsLimit {
-			if err := t.reserveTaasLimit(syncTs + taasLimitUpdateLevel); err != nil {
-				return err
+			t.reservationLock.Lock()
+			if syncTs > t.taasMux.tsLimit {
+				if err := t.reserveTaasLimit(syncTs + taasLimitUpdateLevel); err != nil {
+					return err
+				}
+			} else {
+				t.reservationLock.Unlock()
 			}
-		} else {
-			t.reservationLock.Unlock()
+		} else if syncTs > t.taasMux.tsLimit-taasLimitWarningLevel && t.reservationLock.TryLock() {
+			go t.reserveTaasLimit(syncTs + taasLimitUpdateLevel)
 		}
-	} else if syncTs > t.taasMux.tsLimit-taasLimitWarningLevel && t.reservationLock.TryLock() {
-		go t.reserveTaasLimit(syncTs + taasLimitUpdateLevel)
+		t.taasMux.tsHigh = syncTs
 	}
-	t.taasMux.tsHigh = syncTs
 	return nil
 }
 
