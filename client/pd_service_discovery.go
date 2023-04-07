@@ -418,7 +418,7 @@ func (c *pdServiceDiscovery) updateMember() error {
 			}
 			// Still need to update TsoAllocatorLeaders, even if there is no PD leader
 			// Add taas client urls to members
-			//log.Info("zghtag", zap.String("updateMember", fmt.Sprintf("%s", members.GetLeader().GetDcLocation())))
+			// log.Info("zghtag", zap.String("updateMember",  members.GetLeader().GetDcLocation()))
 			allMembers := members.GetMembers()
 			allocatorsWithTaasNodes := members.GetTsoAllocatorLeaders()
 			if allocatorsWithTaasNodes == nil {
@@ -436,7 +436,7 @@ func (c *pdServiceDiscovery) updateMember() error {
 					DcLocation: taasDCLocation,
 				}
 			}
-			//log.Info("zghtag", zap.String("allMemberClientUrls", (fmt.Sprintf("%s",allMemberClientUrls))))
+			// log.Info("zghtag", zap.Int("allMemberClientUrls", len(allocatorsWithTaasNodes)))
 
 
 			errTSO = c.switchTSOAllocatorLeaders(allocatorsWithTaasNodes)
@@ -447,7 +447,6 @@ func (c *pdServiceDiscovery) updateMember() error {
 			// log.Info("[pd] cannot update member from this address",
 			// 	zap.String("address", url),
 			// 	zap.Error(errors.WithStack(err)))
-				// errs.ZapError(errors.WithStack(err)))
 			select {
 			case <-c.ctx.Done():
 				return errors.WithStack(err)

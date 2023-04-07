@@ -55,6 +55,7 @@ const (
 	BottomTimestamp       int64         = 0
 	TopTimestamp          int64         = math.MaxInt64
 	DefaultTaasRpcTimeout time.Duration = time.Second // 0.5ms for taas rpc timeout
+	DefaultTaasUpdateMemberInterval 	= 3 * time.Second
 	// DefaultFastPathTimeout time.Duration = 5000 * time.Microsecond // 0.5ms for taas rpc timeout
 
 )
@@ -206,6 +207,7 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 					if CompareTimestamp(ts, candidate) == -1 {
 						dc, ok := c.taasDispatcher.Load(nodeName)
 						if !ok {
+							// log.Error("load dispatcher failed", zap.String(nodeName, "false"))
 							continue
 						}
 						tRequest := tsoRequest{
@@ -481,8 +483,11 @@ tsoBatchLoop:
 		for {
 			ctx, ok := connectionCtxs.Load(nodeAddr)
 			if !ok || ctx == nil {
+				time.Sleep(DefaultTaasUpdateMemberInterval)
+				c.updateTSOConnectionCtxs(dispatcherCtx, nodeName, &connectionCtxs)
 				// FIXME:zgh clear requests if load stream failed
 				// log.Error("[taas] load taas stream failed", zap.String("nodeAddr", nodeAddr))
+				log.Error("[taas] load taas stream", zap.Bool("ok", ok), zap.Bool("ctx is nil", ctx==nil))
 				continue streamChoosingLoop
 			}
 			connectionCtx := ctx.(*taasConnectionContext)
@@ -538,7 +543,6 @@ tsoBatchLoop:
 			return
 		case tsDeadlineCh.(chan deadline) <- dl:
 		}
-		// opts = extractSpanReference(tbc, opts[:0])
 		err = c.processTaasRequests(stream, nodeName, tbc)
 		close(done)
 		// If error happens during tso stream handling, reset stream and run the next trial.
@@ -548,10 +552,10 @@ tsoBatchLoop:
 				return
 			default:
 			}
-			// c.svcDiscovery.ScheduleCheckMemberChanged()
+			c.svcDiscovery.ScheduleCheckMemberChanged()
 			log.Error("[tso] getTS error", zap.String("nodeName", nodeName), zap.String("stream-addr", streamAddr), errs.ZapError(errs.ErrClientGetTSO, err))
 			// Set `stream` to nil and remove this stream from the `connectionCtxs` due to error.
-			// connectionCtxs.Delete(streamAddr)
+			connectionCtxs.Delete(streamAddr)
 			cancel()
 			stream = nil
 			// Because ScheduleCheckMemberChanged is asynchronous, if the leader changes, we better call `updateMember` ASAP.
@@ -639,9 +643,6 @@ func (c *taasClient) tryConnectToTaas(dispatcherCtx context.Context, dc string, 
 			continue
 		}
 		cctx, cancel := context.WithCancel(dispatcherCtx)
-		// if dc != taasDCLocation {
-		// 	log.Error("[taas] not taas stream builder", zap.String("dc", dc), zap.String("addr", addr))
-		// }
 		// Create the TSO stream.
 		taasStream, err := tsoStreamBuilder.buildTaas(cctx, cancel, c.option.timeout)
 		if err != nil {
