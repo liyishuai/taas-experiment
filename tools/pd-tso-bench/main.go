@@ -27,6 +27,7 @@ import (
 	"syscall"
 	"time"
 
+	// _ "net/http/pprof"
 	"github.com/influxdata/tdigest"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/log"
@@ -57,10 +58,6 @@ const (
 	taasDCLocation   = "taas"
 )
 
-var (
-	//errorlist = []string{"http://11.158.168.215:3020", "http://11.158.168.215:3030", "http://11.158.168.215:3010", "http://11.158.168.215:3040", "http://11.158.168.215:3050"}
-	errorlist = []string{"http://11.158.168.215:6010", "http://11.158.168.215:6020", "http://11.158.168.215:6030"}
-)
 var promServer *httptest.Server
 
 func collectMetrics(server *httptest.Server) string {
@@ -72,6 +69,7 @@ func collectMetrics(server *httptest.Server) string {
 }
 
 func main() {
+	// go 	http.ListenAndServe("localhost:8080", nil)
 	flag.Parse()
 	ctx, cancel := context.WithCancel(context.Background())
 

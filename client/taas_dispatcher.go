@@ -52,10 +52,10 @@ type taasRespEvent struct {
 }
 
 const (
-	BottomTimestamp        int64         = 0
-	TopTimestamp           int64         = math.MaxInt64
-	DefaultTaasRpcTimeout  time.Duration = 5000 * time.Microsecond // 0.5ms for taas rpc timeout
-	DefaultFastPathTimeout time.Duration = 5000 * time.Microsecond // 0.5ms for taas rpc timeout
+	BottomTimestamp       int64         = 0
+	TopTimestamp          int64         = math.MaxInt64
+	DefaultTaasRpcTimeout time.Duration = time.Second // 0.5ms for taas rpc timeout
+	// DefaultFastPathTimeout time.Duration = 5000 * time.Microsecond // 0.5ms for taas rpc timeout
 
 )
 
@@ -74,15 +74,16 @@ func (c *taasClient) scheduleUpdateTSOConnectionCtxs() {
 }
 
 func (c *taasClient) singleDispatch(dispatcher *taasDispatcher, req *tsoRequest, sessionChan chan<- *taasRespEvent) error {
-	dispatcher.tsoBatchController.tsoRequestCh <- req
-	for {
-		// ticker := time.NewTicker(DefaultTaasRpcTimeout)
-		// defer ticker.Stop()
-		tResp := taasRespEvent{}
+	go func() {
+		dispatcher.tsoBatchController.tsoRequestCh <- req
+	}()
+	ticker := time.NewTicker(DefaultTaasRpcTimeout)
+	defer ticker.Stop()
+	SingleLoop: for {
 		select {
 		case err := <-req.done:
 			if err == nil {
-				tResp = taasRespEvent{
+				tResp := taasRespEvent{
 					nodeName: req.nodeName,
 					err:      nil,
 					timestamp: pdpb.Timestamp{
@@ -97,30 +98,25 @@ func (c *taasClient) singleDispatch(dispatcher *taasDispatcher, req *tsoRequest,
 				}
 				c.taasCache.cacheLock.Unlock()
 				sessionChan <- &tResp
-				return nil
+				break SingleLoop
 			} else {
-				tResp = taasRespEvent{
-					nodeName: req.nodeName,
-					err:      err,
-				}
-				log.Info("zghtag Dispatch Err", zap.Int64(tResp.nodeName, tResp.timestamp.Physical))
+				// log.Info("zghtag Dispatch Err")
+				break SingleLoop
 			}
-			// case <- ticker.C:
-			// 	tResp = taasRespEvent{
-			// 		nodeName: req.nodeName,
-			// 		err:      grpc.ErrClientConnTimeout,
-			// 	}
+		case <- ticker.C:
+			headReq := <- dispatcher.tsoBatchController.tsoRequestCh
+			headReq.done <- errors.New("TaasRpcTimeout")
+			break SingleLoop
 		}
-		// sessionChan <- &tResp
 	}
-
+	return nil
 }
 
 func CompareTimestamp(tsoOne, tsoTwo *pdpb.Timestamp) int {
-	if tsoOne.GetPhysical() > tsoTwo.GetPhysical() || (tsoOne.GetPhysical() == tsoTwo.GetPhysical() && tsoOne.GetLogical() > tsoTwo.GetLogical()) {
+	if tsoOne.GetPhysical() > tsoTwo.GetPhysical() {
 		return 1
 	}
-	if tsoOne.GetPhysical() == tsoTwo.GetPhysical() && tsoOne.GetLogical() == tsoTwo.GetLogical() {
+	if tsoOne.GetPhysical() == tsoTwo.GetPhysical(){
 		return 0
 	}
 	return -1
@@ -173,11 +169,10 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 			log.Fatal("taas dispatcher not found")
 			c.createTaasDispatcher(nodeName)
 		}
-		tRequest := *request
-		tRequest.nodeName = nodeName
-		tRequest.done = make(chan error, 1)
-		tRequest.requestCtx, _ = context.WithCancel(context.Background())
-		tRequest.clientCtx, _ = context.WithCancel(context.Background())
+		tRequest := tsoRequest{
+			done:     make(chan error, 1),
+			nodeName: nodeName,
+		}
 		sessionInfo[nodeName] = &pdpb.Timestamp{
 			Physical: TopTimestamp,
 			Logical:  0,
@@ -187,27 +182,24 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 	})
 
 	for e := range sessionCh {
+		// log.Info("zghtag", zap.String("start session", e.nodeName))
+		tNodeName := e.nodeName
 		if e.err != nil {
+			// log.Error("zghtag session err", zap.Error(e.err))
 			continue
 		}
-		tNodeName := e.nodeName
-		// log.Info("zghtag update", zap.Int64(tNodeName, e.timestamp.Physical))
 		if CompareTimestamp(&e.timestamp, sessionInfo[tNodeName]) == -1 {
 			sessionInfo[tNodeName] = &e.timestamp
 		}
 		candidate := GetMthSmallestTS(sessionInfo, c.M)
-		// log.Info("zghtag candidate", zap.Int64("phy", candidate.Physical))
-
 		if candidate.Physical < TopTimestamp {
 			// log.Info("zghtag", zap.Int64("Mth", candidate.Physical), zap.Int("GE", CountGEMthSmallestTS(c.taasCache.cacheData, candidate)), zap.Int("N", c.N), zap.Int("M", c.M))
 			if c.CountGEMthSmallestTS(candidate) > c.N-c.M {
 				request.physical = candidate.Physical
 				request.logical = candidate.Logical
-				if candidate.Physical%10000 == 0 {
-					log.Info("zghtag", zap.Int64("Mth", candidate.Physical))
-				}
-				request.done <- nil
-				return nil
+				// log.Info("zghtag", zap.Int64("Confirmed", candidate.Physical))
+				// request.done <- nil
+				break
 			} else if len(sessionCh) == 0 && !slowPathBroadcasted {
 				// log.Info("zghtag slowpath ", zap.Bool("slowPathBroadcasted", slowPathBroadcasted))
 				for nodeName, ts := range sessionInfo {
@@ -216,13 +208,12 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 						if !ok {
 							continue
 						}
-						tRequest := *request
-						tRequest.nodeName = nodeName
-						tRequest.done = make(chan error, 1)
-						tRequest.physical = candidate.Physical
-						tRequest.logical = candidate.Logical
-						tRequest.requestCtx, _ = context.WithCancel(context.Background())
-						tRequest.clientCtx, _ = context.WithCancel(context.Background())
+						tRequest := tsoRequest{
+							done:     make(chan error, 1),
+							nodeName: nodeName,
+							physical: candidate.Physical,
+							logical:  candidate.Logical,
+						}
 						go c.singleDispatch(dc.(*taasDispatcher), &tRequest, sessionCh)
 					}
 				}
@@ -231,6 +222,7 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 		}
 	}
 	request.done <- nil
+	// log.Info("zghtag session finished")
 	return nil
 }
 
@@ -489,6 +481,7 @@ tsoBatchLoop:
 		for {
 			ctx, ok := connectionCtxs.Load(nodeAddr)
 			if !ok || ctx == nil {
+				// FIXME:zgh clear requests if load stream failed
 				// log.Error("[taas] load taas stream failed", zap.String("nodeAddr", nodeAddr))
 				continue streamChoosingLoop
 			}
