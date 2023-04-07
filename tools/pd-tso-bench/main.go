@@ -27,13 +27,13 @@ import (
 	"syscall"
 	"time"
 
-	// _ "net/http/pprof"
 	"github.com/influxdata/tdigest"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/log"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	pd "github.com/tikv/pd/client"
 	"go.uber.org/zap"
+	"golang.org/x/time/rate"
 )
 
 var (
@@ -50,6 +50,8 @@ var (
 	keyPath                = flag.String("key", "", "path of file that contains X509 key in PEM format")
 	maxBatchWaitInterval   = flag.Duration("batch-interval", 0, "the max batch wait interval")
 	enableTSOFollowerProxy = flag.Bool("enable-tso-follower-proxy", false, "whether enable the TSO Follower Proxy")
+	limitnum =  flag.Int("ln", 60000, "limitnum")
+	limitinterval =  flag.Int("lt", 1, "limitinterval")
 	wg                     sync.WaitGroup
 )
 
@@ -69,7 +71,6 @@ func collectMetrics(server *httptest.Server) string {
 }
 
 func main() {
-	// go 	http.ListenAndServe("localhost:8080", nil)
 	flag.Parse()
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -106,8 +107,7 @@ func bench(mainCtx context.Context) {
 			CAPath:   *caPath,
 			CertPath: *certPath,
 			KeyPath:  *keyPath,
-		}, pd.WithClientTypeOption(*dcLocation))
-
+		},pd.WithClientTypeOption(*dcLocation))
 		pdCli.UpdateOption(pd.MaxTSOBatchWaitInterval, *maxBatchWaitInterval)
 		pdCli.UpdateOption(pd.EnableTSOFollowerProxy, *enableTSOFollowerProxy)
 		if err != nil {
@@ -117,6 +117,7 @@ func bench(mainCtx context.Context) {
 	}
 
 	ctx, cancel := context.WithCancel(mainCtx)
+	lim := rate.NewLimiter(rate.Every(time.Millisecond*time.Duration(*limitinterval)),int(*limitnum/1000*(*limitinterval)))
 	// To avoid the first time high latency.
 	for idx, pdCli := range pdClients {
 		if *dcLocation == taasDCLocation {
@@ -132,19 +133,19 @@ func bench(mainCtx context.Context) {
 		}
 
 	}
+	
 
 	durCh := make(chan time.Duration, 2*(*concurrency)*(*clientNumber))
 
 	wg.Add((*concurrency) * (*clientNumber))
 	for _, pdCli := range pdClients {
 		for i := 0; i < *concurrency; i++ {
-			go reqWorker(ctx, pdCli, durCh)
+			go reqWorker(ctx, pdCli, durCh,lim)
 		}
 	}
 
 	wg.Add(1)
 	go showStats(ctx, durCh)
-
 	timer := time.NewTimer(*duration)
 	defer timer.Stop()
 
@@ -163,6 +164,7 @@ func bench(mainCtx context.Context) {
 }
 
 var latencyTDigest *tdigest.TDigest = tdigest.New()
+var latencyTDigestSec *tdigest.TDigest = tdigest.New()
 
 func showStats(ctx context.Context, durCh chan time.Duration) {
 	defer wg.Done()
@@ -182,8 +184,11 @@ func showStats(ctx context.Context, durCh chan time.Duration) {
 		case <-ticker.C:
 			// runtime.GC()
 			if *verbose {
-				fmt.Println(s.Counter())
+				fmt.Printf(s.Counter())
 			}
+			//gingindex=gindex+1
+			fmt.Printf(",%.4f,%.4f,%.4f,%.4f\n", latencyTDigestSec.Quantile(0.5), latencyTDigestSec.Quantile(0.8), latencyTDigestSec.Quantile(0.9), latencyTDigestSec.Quantile(0.99))
+			latencyTDigestSec.Reset()
 			total.merge(s)
 			s = newStats()
 		case d := <-durCh:
@@ -245,6 +250,7 @@ func (s *stats) update(dur time.Duration) {
 	s.count++
 	s.totalDur += dur
 	latencyTDigest.Add(float64(dur.Nanoseconds())/1e6, 1)
+	latencyTDigestSec.Add(float64(dur.Nanoseconds())/1e6, 1)
 
 	if dur > s.maxDur {
 		s.maxDur = dur
@@ -335,12 +341,17 @@ func (s *stats) merge(other *stats) {
 	s.oneThousandCnt += other.oneThousandCnt
 }
 
+// var gindex int
 func (s *stats) Counter() string {
-	return fmt.Sprintf(
-		"count: %d, max: %.4fms, min: %.4fms, avg: %.4fms\n<1ms: %d, >1ms: %d, >2ms: %d, >5ms: %d, >10ms: %d, >30ms: %d, >50ms: %d, >100ms: %d, >200ms: %d, >400ms: %d, >800ms: %d, >1s: %d",
-		s.count, float64(s.maxDur.Nanoseconds())/float64(time.Millisecond), float64(s.minDur.Nanoseconds())/float64(time.Millisecond), float64(s.totalDur.Nanoseconds())/float64(s.count)/float64(time.Millisecond),
-		s.submilliCnt, s.milliCnt, s.twoMilliCnt, s.fiveMilliCnt, s.tenMSCnt, s.thirtyCnt, s.fiftyCnt, s.oneHundredCnt, s.twoHundredCnt, s.fourHundredCnt,
-		s.eightHundredCnt, s.oneThousandCnt)
+	if s.count == 0 {
+		return fmt.Sprintf(
+			"secdata:%d,NaN,NaN,NaN", s.count)
+
+	} else {
+		return fmt.Sprintf(
+			"secdata:%d,%.4f,%.4f,%.4f",
+			s.count, float64(s.totalDur.Nanoseconds())/float64(s.count)/float64(time.Millisecond), float64(s.minDur.Nanoseconds())/float64(time.Millisecond), float64(s.maxDur.Nanoseconds())/float64(time.Millisecond))
+	}
 }
 
 func (s *stats) Percentage() string {
@@ -353,8 +364,7 @@ func (s *stats) Percentage() string {
 func (s *stats) calculate(count int) float64 {
 	return float64(count) * 100 / float64(s.count)
 }
-
-func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration) {
+func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration,rat *rate.Limiter) {
 	defer wg.Done()
 
 	reqCtx, cancel := context.WithCancel(ctx)
@@ -369,10 +379,13 @@ func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration) {
 			maxRetryTime           int32         = 50
 			sleepIntervalOnFailure time.Duration = 100 * time.Millisecond
 		)
+		if rat!=nil{
+			rat.Wait(context.TODO())
+		}
 		for ; i < maxRetryTime; i++ {
 			err = error(nil)
 			if *dcLocation == taasDCLocation {
-				_, _, err = pdCli.GetTaasTS(reqCtx, *dcLocation , 2)
+				_, _, err = pdCli.GetTaasTS(reqCtx, *dcLocation, 2)
 			} else {
 				_, _, err = pdCli.GetLocalTS(reqCtx, *dcLocation)
 			}

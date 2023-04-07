@@ -487,7 +487,7 @@ tsoBatchLoop:
 				c.updateTSOConnectionCtxs(dispatcherCtx, nodeName, &connectionCtxs)
 				// FIXME:zgh clear requests if load stream failed
 				// log.Error("[taas] load taas stream failed", zap.String("nodeAddr", nodeAddr))
-				log.Error("[taas] load taas stream", zap.Bool("ok", ok), zap.Bool("ctx is nil", ctx==nil))
+				// log.Error("[taas] load taas stream", zap.Bool("ok", ok), zap.Bool("ctx is nil", ctx==nil))
 				continue streamChoosingLoop
 			}
 			connectionCtx := ctx.(*taasConnectionContext)

@@ -9,7 +9,9 @@ require (
 	github.com/prometheus/client_golang v1.11.1
 	github.com/tikv/pd/client v0.0.0-00010101000000-000000000000
 	go.uber.org/zap v1.20.0
+	golang.org/x/time v0.3.0 // indirect
 )
 
 replace github.com/tikv/pd/client => ../../client
+
 replace github.com/pingcap/kvproto => ../../taas-proto/taasplugin/
