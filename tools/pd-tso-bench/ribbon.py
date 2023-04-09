@@ -6,11 +6,11 @@ from matplotlib.ticker import ScalarFormatter
 #plt.rc('font', size=8)
 plt.margins(0)
 
-latency_min = 0.08
-latency_max = 100
-latency_ticks = [0.1, 0.4, 1, 4, 10, 40, 100]
-latency_labels = ['0.1', '0.4', '1', '4', '10', '40', '100']
-throughput_max = 90000
+latency_min = 0.1
+latency_max = 10
+latency_ticks = [0.1, 0.4, 1, 4, 10]
+latency_labels = ['0.1', '0.4', '1', '4', '10']
+throughput_max = 80000
 throughput_ticks = [0, 2e4, 4e4, 6e4, 8e4]
 throughput_labels=['0', '20k', '40k', '60k', '80k']
 
@@ -34,13 +34,14 @@ with open('tso.csv', encoding='utf-8-sig') as tso_file:
         tso99.append(float(row[3]))
         tso100.append(float(row[4]))
 
-fig, (taas_latency, tso_latency) = plt.subplots(2, 1, sharex=True, figsize=(8, 4))
-plt.subplots_adjust(hspace=0.4)
+fig, (taas_throughput, tso_throughput) = plt.subplots(2, 1, sharex=True, figsize=(8, 4))
+plt.subplots_adjust(hspace=0.3)
+
+tso_latency = tso_throughput.twinx()
+taas_latency = taas_throughput.twinx()
 
 taas_latency.set_title('TaaS', loc='left')
 tso_latency.set_title('TiDB-PD', loc='left')
-
-tso_throughput = tso_latency.twinx()
 
 tso_latency.fill_between(x, tso0, tso50, color='green')
 tso_latency.fill_between(x, tso50, tso99, color='orange')
@@ -55,6 +56,9 @@ tso_throughput.set_ylim(0, throughput_max)
 tso_throughput.set_xlim(0, 300)
 tso_throughput.set_yticks(throughput_ticks)
 tso_throughput.set_yticklabels(throughput_labels)
+tso_throughput.set_xticks(time_ticks)
+tso_throughput.set_xticklabels(time_labels)
+tso_throughput.set_xlabel('Time')
 
 taas_total = []
 taas0 = []
@@ -71,31 +75,32 @@ with open('taas.csv', encoding='utf-8-sig') as taas_file:
         taas99.append(float(row[3]))
         taas100.append(float(row[4]))
 
-taas_throughput = taas_latency.twinx()
 taas_throughput.set_ylim(0, throughput_max)
 taas_throughput.set_xlim(0, 300)
 
-taas_latency.fill_between(x, taas99, taas100, color='aqua', label='latency 99~100%')
+taas_latency.fill_between(x, taas0, taas50, color='green', label='latency 0~50%')
 taas_latency.fill_between(x, taas50, taas99, color='orange', label='latency 50~99%')
-taas_latency.fill_between(x, taas0, taas50, color='green', label='latency 00~50%')
+taas_latency.fill_between(x, taas99, taas100, color='aqua', label='latency 99~100%')
 taas_latency.set_yscale('log')
 taas_latency.set_ylim(latency_min, latency_max)
 taas_latency.set_yticks(latency_ticks)
 taas_latency.set_yticklabels(latency_labels)
 
 taas_throughput.plot(x, taas_total, color='black')
-taas_throughput.set_xticks(time_ticks)
-taas_throughput.set_xticklabels(time_labels)
 taas_throughput.set_yticks(throughput_ticks)
 taas_throughput.set_yticklabels(throughput_labels)
-taas_throughput.set_xlabel('Time')
 
-fig.subplots_adjust(top=.8)#, right=.9)
+fig.subplots_adjust(top=.85)
 fig.legend(ncol=4, loc='upper center')
 tso_latency.set_xlabel('Execution Time')
 tso_latency.set_ylabel('Latency (ms)')
 taas_latency.set_ylabel('Latency (ms)')
 tso_throughput.set_ylabel('Throughput')
 taas_throughput.set_ylabel('Throughput')
+
+tso_throughput.set_frame_on(False)
+taas_throughput.set_frame_on(False)
+tso_throughput.set_zorder(tso_latency.zorder+1)
+taas_throughput.set_zorder(taas_latency.zorder+1)
 
 fig.savefig('result.pdf', format='pdf')
