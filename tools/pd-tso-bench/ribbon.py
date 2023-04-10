@@ -17,7 +17,7 @@ throughput_labels=['0', '20k', '40k', '60k', '80k']
 time_ticks = [0, 60, 120, 180, 240, 300]
 time_labels = ["0'00\"", "1'00\"", "2'00\"", "3'00\"", "4'00\"", "5'00\""]
 
-x = np.arange(0, 300, 1)
+x = np.arange(0, 301, 1)
 
 tso_total = []
 tso0 = []
