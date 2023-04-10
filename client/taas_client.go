@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
+
 	// "time"
 
 	"github.com/pingcap/errors"
@@ -32,7 +33,6 @@ import (
 
 type TaasCache struct {
 	cacheData map[string]*pdpb.Timestamp
-	cacheLock sync.RWMutex
 }
 type taasClient struct {
 	N      int
