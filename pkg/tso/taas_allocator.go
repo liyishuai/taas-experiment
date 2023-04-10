@@ -15,7 +15,6 @@
 package tso
 
 import (
-
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/tikv/pd/pkg/election"
 )
@@ -24,8 +23,8 @@ import (
 type TaasTSOAllocator struct {
 	// for global TSO synchronization
 	allocatorManager *AllocatorManager
-	// leadership is used to get etcd client 
-	taasNode	 	*taasNode
+	// leadership is used to get etcd client
+	taasNode *taasNode
 }
 
 // NewTaasTSOAllocator creates a new Taas TSO allocator.
@@ -37,7 +36,7 @@ func NewTaasTSOAllocator(
 		allocatorManager: am,
 		taasNode: &taasNode{
 			client:                 leadership.GetClient(),
-			nodeId:					int64(am.member.ID()),
+			nodeId:                 int64(am.member.ID()),
 			rootPath:               am.rootPath,
 			ttsPath:                "tts",
 			storage:                am.storage,
@@ -45,10 +44,10 @@ func NewTaasTSOAllocator(
 			updatePhysicalInterval: am.updatePhysicalInterval,
 			maxResetTSGap:          am.maxResetTSGap,
 			dcLocation:             TaaSLocation,
-			taasMux:                &taasObject{
-				tsHigh: 	0,
-				tsLow:		int64(am.member.ID()),
-				tsLimit:	taasLimitUpdateLevel,
+			taasMux: &taasObject{
+				tsHigh:  0,
+				tsLow:   int64(am.member.ID()),
+				tsLimit: taasLimitUpdateLevel,
 			},
 		},
 	}
@@ -77,22 +76,9 @@ func (tta *TaasTSOAllocator) SetTSO(tso uint64, ignoreSmaller, skipUpperBoundChe
 	return tta.taasNode.setTaasHigh(int64(tso))
 }
 
-// GenerateTSO is used to generate the given number of TSOs.
-// Make sure you have initialized the TSO allocator before calling this method.
-// Basically, there are two ways to generate a Global TSO:
-//  1. The old way to generate a normal TSO from memory directly, which makes the TSO service node become single point.
-//  2. The new way to generate a Global TSO by synchronizing with all other Local TSO Allocators.
-//
-// And for the new way, there are two different strategies:
-//  1. Collect the max Local TSO from all Local TSO Allocator leaders and write it back to them as MaxTS.
-//  2. Estimate a MaxTS and try to write it to all Local TSO Allocator leaders directly to reduce the RTT.
-//     During the process, if the estimated MaxTS is not accurate, it will fallback to the collecting way.
+// Unused
 func (tta *TaasTSOAllocator) GenerateTSO(count uint32) (pdpb.Timestamp, error) {
-	return tta.taasNode.generateTSO(count)
-}
-
-func (tta *TaasTSOAllocator) getCurrentTSO() (pdpb.Timestamp, error) {
-	return tta.taasNode.getTSO()
+	panic("Unexpected calling of GenerateTSO on TaasTSOAllocator")
 }
 
 // Reset is used to reset the TSO allocator.
@@ -101,6 +87,6 @@ func (tta *TaasTSOAllocator) Reset() {
 }
 
 // For taas
-func (tta *TaasTSOAllocator) GenerateTaasTSO(count uint32, ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
-	return tta.taasNode.generateTaasTSO(count, ts)
+func (tta *TaasTSOAllocator) GenerateTaasTSO(ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
+	return tta.taasNode.generateTaasTSO(ts)
 }

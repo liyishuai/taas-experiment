@@ -54,7 +54,7 @@ type Allocator interface {
 	// Make sure you have initialized the TSO allocator before calling.
 	GenerateTSO(count uint32) (pdpb.Timestamp, error)
 
-	GenerateTaasTSO(count uint32, ts *pdpb.Timestamp) (pdpb.Timestamp, error)
+	GenerateTaasTSO(ts *pdpb.Timestamp) (pdpb.Timestamp, error)
 	// Reset is used to reset the TSO allocator.
 	Reset()
 }
@@ -451,7 +451,7 @@ func (gta *GlobalTSOAllocator) Reset() {
 }
 
 // For taas
-func (gta *GlobalTSOAllocator) GenerateTaasTSO(count uint32, ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
+func (gta *GlobalTSOAllocator) GenerateTaasTSO(ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
 	log.Error("taas", zap.String("GlobalTSOAllocator", "unused method called"))
 	return pdpb.Timestamp{}, nil
 }

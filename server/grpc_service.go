@@ -222,8 +222,8 @@ func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
 		count := request.GetCount()
 		// log.Info("zghtag", zap.String("request", fmt.Sprintf("%s", request.String())))
 		respTsList := make([]*pdpb.Timestamp, len(request.GetTimestamps()))
-		for i, reqTs := range(request.GetTimestamps()){
-			ts, err := s.taasAllocatorManager.HandleTaasRequest(1, reqTs)
+		for i, reqTs := range request.GetTimestamps() {
+			ts, err := s.taasAllocatorManager.HandleTaasRequest(reqTs)
 			respTsList[i] = &ts
 			if err != nil {
 				log.Error("zghtag", zap.String("get taas ts failed", reqTs.String()))
@@ -236,11 +236,11 @@ func (s *GrpcServer) Taas(stream pdpb.PD_TaasServer) error {
 		}
 		// tsoHandleDuration.Observe(time.Since(start).Seconds())
 		response := &pdpb.TaasResponse{
-			Header:    s.header(),
+			Header:     s.header(),
 			Timestamps: respTsList,
-			Count:     count,
+			Count:      count,
 		}
-		// log.Info("zghtag", zap.String("return tso-resp", response.String()))	
+		// log.Info("zghtag", zap.String("return tso-resp", response.String()))
 		if err := stream.Send(response); err != nil {
 			return errors.WithStack(err)
 		}
