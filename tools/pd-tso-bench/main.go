@@ -50,8 +50,8 @@ var (
 	keyPath                = flag.String("key", "", "path of file that contains X509 key in PEM format")
 	maxBatchWaitInterval   = flag.Duration("batch-interval", 0, "the max batch wait interval")
 	enableTSOFollowerProxy = flag.Bool("enable-tso-follower-proxy", false, "whether enable the TSO Follower Proxy")
-	limitnum =  flag.Int("ln", 60000, "limitnum")
-	limitinterval =  flag.Int("lt", 1, "limitinterval")
+	limitnum               = flag.Int("ln", 60000, "limitnum")
+	limitsize              = flag.Int("ls", 1, "limitinterval")
 	wg                     sync.WaitGroup
 )
 
@@ -107,7 +107,7 @@ func bench(mainCtx context.Context) {
 			CAPath:   *caPath,
 			CertPath: *certPath,
 			KeyPath:  *keyPath,
-		},pd.WithClientTypeOption(*dcLocation))
+		}, pd.WithClientTypeOption(*dcLocation))
 		pdCli.UpdateOption(pd.MaxTSOBatchWaitInterval, *maxBatchWaitInterval)
 		pdCli.UpdateOption(pd.EnableTSOFollowerProxy, *enableTSOFollowerProxy)
 		if err != nil {
@@ -117,7 +117,8 @@ func bench(mainCtx context.Context) {
 	}
 
 	ctx, cancel := context.WithCancel(mainCtx)
-	lim := rate.NewLimiter(rate.Every(time.Millisecond*time.Duration(*limitinterval)),int(*limitnum/1000*(*limitinterval)))
+	//fmt.Println(((*limitnum)/1000*(*limitinterval)))
+	lim := rate.NewLimiter(rate.Limit(*limitnum), (*limitsize))
 	// To avoid the first time high latency.
 	for idx, pdCli := range pdClients {
 		if *dcLocation == taasDCLocation {
@@ -133,14 +134,13 @@ func bench(mainCtx context.Context) {
 		}
 
 	}
-	
 
 	durCh := make(chan time.Duration, 2*(*concurrency)*(*clientNumber))
 
 	wg.Add((*concurrency) * (*clientNumber))
 	for _, pdCli := range pdClients {
 		for i := 0; i < *concurrency; i++ {
-			go reqWorker(ctx, pdCli, durCh,lim)
+			go reqWorker(ctx, pdCli, durCh, lim)
 		}
 	}
 
@@ -364,14 +364,17 @@ func (s *stats) Percentage() string {
 func (s *stats) calculate(count int) float64 {
 	return float64(count) * 100 / float64(s.count)
 }
-func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration,rat *rate.Limiter) {
+func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration, rat *rate.Limiter) {
 	defer wg.Done()
 
 	reqCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	for {
-		start := time.Now()
+		if rat != nil {
+			rat.Wait(ctx)
+		}
+		//start := time.Now()
 
 		var (
 			i                      int32
@@ -379,9 +382,7 @@ func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration,ra
 			maxRetryTime           int32         = 50
 			sleepIntervalOnFailure time.Duration = 100 * time.Millisecond
 		)
-		if rat!=nil{
-			rat.Wait(context.TODO())
-		}
+		start := time.Now()
 		for ; i < maxRetryTime; i++ {
 			err = error(nil)
 			if *dcLocation == taasDCLocation {
