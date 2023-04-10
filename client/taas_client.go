@@ -43,7 +43,7 @@ type taasClient struct {
 	option *option
 
 	taasCache TaasCache // store latest timestamp of each taas node
-	twg       sync.WaitGroup
+	cacheLock sync.RWMutex
 
 	keyspaceID   uint32
 	svcDiscovery ServiceDiscovery
@@ -59,8 +59,6 @@ type taasClient struct {
 	taasDispatcher sync.Map // Same as map[string]chan *tsoRequest
 	// dc-location -> deadline
 	tsDeadline sync.Map // Same as map[string]chan deadline
-	// dc-location -> *lastTSO
-	lastTSMap sync.Map // Same as map[string]*lastTSO
 
 	checkTSDeadlineCh         chan struct{}
 	checkTSODispatcherCh      chan struct{}

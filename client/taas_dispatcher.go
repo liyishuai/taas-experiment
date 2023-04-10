@@ -94,6 +94,11 @@ SingleLoop:
 					},
 				}
 				// log.Info("zghtag Dispatch Done", zap.Int64(tResp.nodeName, tResp.timestamp.Physical))
+				c.taasCache.cacheLock.Lock()
+				if CompareTimestamp(c.taasCache.cacheData[req.nodeName], &tResp.timestamp) == -1 {
+					c.taasCache.cacheData[req.nodeName] = &tResp.timestamp
+				}
+				c.taasCache.cacheLock.Unlock()
 				sessionChan <- &tResp
 				break SingleLoop
 			} else {
@@ -190,9 +195,6 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 			// log.Error("zghtag session err", zap.Error(e.err))
 			continue
 		} else {
-			if CompareTimestamp(c.taasCache.cacheData[tNodeName], &e.timestamp) == -1 {
-				c.taasCache.cacheData[tNodeName] = &e.timestamp
-			}
 			if CompareTimestamp(&e.timestamp, sessionInfo[tNodeName]) == -1 {
 				sessionInfo[tNodeName] = &e.timestamp
 			}
