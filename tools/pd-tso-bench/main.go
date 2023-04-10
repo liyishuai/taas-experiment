@@ -28,12 +28,12 @@ import (
 	"time"
 
 	"github.com/influxdata/tdigest"
+	"github.com/juju/ratelimit"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/log"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	pd "github.com/tikv/pd/client"
 	"go.uber.org/zap"
-	"golang.org/x/time/rate"
 )
 
 var (
@@ -118,7 +118,9 @@ func bench(mainCtx context.Context) {
 
 	ctx, cancel := context.WithCancel(mainCtx)
 	//fmt.Println(((*limitnum)/1000*(*limitinterval)))
-	lim := rate.NewLimiter(rate.Limit(*limitnum), (*limitsize))
+	//lim := rate.NewLimiter(rate.Limit(*limitnum), (*limitsize))
+	//lim := rate.NewLimiter(rate.Every(time.Millisecond*10), 600)
+	lim := ratelimit.NewBucketWithQuantum((time.Millisecond * 100), 10000, 6000)
 	// To avoid the first time high latency.
 	for idx, pdCli := range pdClients {
 		if *dcLocation == taasDCLocation {
@@ -364,18 +366,18 @@ func (s *stats) Percentage() string {
 func (s *stats) calculate(count int) float64 {
 	return float64(count) * 100 / float64(s.count)
 }
-func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration, rat *rate.Limiter) {
+
+// func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration, rat *rate.Limiter) {
+func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration, rat *ratelimit.Bucket) {
 	defer wg.Done()
 
 	reqCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
 	for {
 		if rat != nil {
-			rat.Wait(ctx)
+			rat.Wait(1)
 		}
 		//start := time.Now()
-
 		var (
 			i                      int32
 			err                    error
