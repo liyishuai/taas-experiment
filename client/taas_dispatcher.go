@@ -147,6 +147,8 @@ func GetMthSmallestTS(sessionInfo map[string]*pdpb.Timestamp, M int) *pdpb.Times
 }
 
 func (c *taasClient) CountGEMthSmallestTS(Mth *pdpb.Timestamp) int {
+	c.taasCache.cacheLock.RLock()
+	defer c.taasCache.cacheLock.RUnlock()
 	cnt := 0
 	for _, ts := range c.taasCache.cacheData {
 		if CompareTimestamp(ts, Mth) >= 0 {

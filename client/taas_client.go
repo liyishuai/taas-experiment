@@ -33,6 +33,7 @@ import (
 
 type TaasCache struct {
 	cacheData map[string]*pdpb.Timestamp
+	cacheLock sync.RWMutex
 }
 type taasClient struct {
 	N      int
@@ -43,7 +44,6 @@ type taasClient struct {
 	option *option
 
 	taasCache TaasCache // store latest timestamp of each taas node
-	cacheLock sync.RWMutex
 
 	keyspaceID   uint32
 	svcDiscovery ServiceDiscovery
