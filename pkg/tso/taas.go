@@ -55,8 +55,8 @@ type taasNode struct {
 }
 
 var (
-	taasLimitWarningLevel = int64(1 << 24)
-	taasLimitUpdateLevel  = int64(1 << 28)
+	taasLimitWarningLevel int64 = 60000 * 1
+	taasLimitUpdateLevel  int64 = 60000 * 10
 )
 
 func (t *taasNode) setTaasHigh(syncTs int64) error {
@@ -88,37 +88,18 @@ func (t *taasNode) setTaasLimit(syncTs int64) {
 	}
 }
 
-func (t *taasNode) getTSO() (pdpb.Timestamp, error) {
-	t.taasMux.RLock()
-	defer t.taasMux.RUnlock()
-	timestamp := &pdpb.Timestamp{
-		Physical:   t.taasMux.tsHigh,
-		Logical:    t.taasMux.tsLow,
-		SuffixBits: 0,
-	}
-	return *timestamp, nil
-}
-
-// Unused 
-func (t *taasNode) generateTSO(count uint32)  (pdpb.Timestamp, error) {
-	log.Error("zghtag", zap.Int64("unused api", t.taasMux.tsHigh))
-	return pdpb.Timestamp{}, nil
-}
-
-func (t *taasNode) generateTaasTSO(count uint32, ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
+func (t *taasNode) generateTaasTSO(ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
 	t.taasMux.Lock()
 	defer t.taasMux.Unlock()
 	// log.Info("zghtag", zap.Int64("taas generate tso", t.taasMux.tsHigh))
 
-	newTaasLevel := t.taasMux.tsHigh + int64(count)
-	if newTaasLevel <= ts.Physical {
-		newTaasLevel = ts.Physical + 1
+	newTaasLevel := t.taasMux.tsHigh
+	if newTaasLevel < ts.Physical {
+		newTaasLevel = ts.Physical
 	}
-	if newTaasLevel+taasLimitWarningLevel > t.taasMux.tsLimit {
-		// log.Info("TaasTag", zap.Int64("taas high", t.taasMux.tsHigh), zap.Int64("taas limit", t.taasMux.tsLimit))
-		t.reserveTaasLimit(newTaasLevel + taasLimitUpdateLevel)
-	}
-	t.taasMux.tsHigh = newTaasLevel
+	newTaasLevel++
+
+	t.setTaasHigh(newTaasLevel)
 	timestamp := &pdpb.Timestamp{
 		Physical:   t.taasMux.tsHigh,
 		Logical:    t.taasMux.tsLow,

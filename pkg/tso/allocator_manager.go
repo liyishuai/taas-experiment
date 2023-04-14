@@ -1021,14 +1021,14 @@ func (am *AllocatorManager) HandleTSORequest(dcLocation string, count uint32) (p
 }
 
 // HandleTSORequest forwards TSO allocation requests to correct TSO Allocators.
-func (am *AllocatorManager) HandleTaasRequest(count uint32, ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
+func (am *AllocatorManager) HandleTaasRequest(ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
 
 	allocatorGroup, exist := am.getAllocatorGroup(TaaSLocation)
 	if !exist {
 		err := errs.ErrGetAllocator.FastGenByArgs(fmt.Sprintf("%s allocator not found, generate timestamp failed", TaaSLocation))
 		return pdpb.Timestamp{}, err
 	}
-	return allocatorGroup.allocator.GenerateTaasTSO(count, ts)
+	return allocatorGroup.allocator.GenerateTaasTSO(ts)
 }
 
 // ResetAllocatorGroup will reset the allocator's leadership and TSO initialized in memory.
