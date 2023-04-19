@@ -74,7 +74,7 @@ func (c *taasClient) scheduleUpdateTSOConnectionCtxs() {
 	}
 }
 
-func (c *taasClient) singleDispatch(dispatcher *taasDispatcher, req *tsoRequest, sessionChan chan<- *taasRespEvent) error {
+func (c *taasClient) sndAndRcv(dispatcher *taasDispatcher, req *tsoRequest, sessionChan chan<- *taasRespEvent) error {
 	go func() {
 		dispatcher.tsoBatchController.tsoRequestCh <- req
 	}()
@@ -137,7 +137,6 @@ func (tsList TSList) Swap(i, j int)      { tsList[i], tsList[j] = tsList[j], tsL
 func GetMthSmallestTS(sessionInfo map[string]*pdpb.Timestamp, M int) *pdpb.Timestamp {
 	tsInfo := make(TSList, 0, len(sessionInfo))
 	for _, ts := range sessionInfo {
-		// log.Info("taastag getMth", zap.Int64(nm, ts.Physical))
 		tsInfo = append(tsInfo, ts)
 	}
 	sort.Sort(tsInfo)
@@ -181,7 +180,7 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 			Physical: TopTimestamp,
 			Logical:  0,
 		}
-		go c.singleDispatch(dc.(*taasDispatcher), &tRequest, sessionCh)
+		go c.sndAndRcv(dc.(*taasDispatcher), &tRequest, sessionCh)
 		return true
 	})
 
@@ -213,7 +212,7 @@ func (c *taasClient) dispatchRequest(dcLocation string, request *tsoRequest) err
 								physical: candidate.Physical,
 								logical:  candidate.Logical,
 							}
-							go c.singleDispatch(dc.(*taasDispatcher), &tRequest, sessionCh)
+							go c.sndAndRcv(dc.(*taasDispatcher), &tRequest, sessionCh)
 						}
 					}
 					slowPathBroadcasted = true

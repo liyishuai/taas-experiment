@@ -1,8 +1,12 @@
 # File-to-Pseudo Mapping
-|Peseudo in paper|File|
-|-|-|
-|line 407-449|client/taas_dispatcher.go|
-|line 697-718|pkg/tso/taas.go|
+|Peseudo in paper|File|Function|
+|-|-|-|
+|line 407-434|client/taas_dispatcher.go| dispatchRequest|
+|line 435-443|client/taas_dispatcher.go| "inline implementation"|
+|line 445-449|client/taas_dispatcher.go| sndAndRcv|
+|line 697-709|pkg/tso/taas.go|generateTaasTSO|
+|line 710-714|pkg/tso/taas.go|Initialize|
+|line 715-718|pkg/tso/taas.go|reserveTaasLimit|
 
 
 # Run TSO bench in PD
