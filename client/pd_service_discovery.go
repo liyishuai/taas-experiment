@@ -388,7 +388,7 @@ func (c *pdServiceDiscovery) updateServiceMode() {
 	if len(leaderAddr) > 0 {
 		clusterInfo, err := c.getClusterInfo(c.ctx, leaderAddr, c.option.timeout)
 		if err != nil {
-		//	log.Warn("[pd] failed to get cluster info for the leader", zap.String("leader-addr", leaderAddr), errs.ZapError(err))
+			//	log.Warn("[pd] failed to get cluster info for the leader", zap.String("leader-addr", leaderAddr), errs.ZapError(err))
 			return
 		}
 		c.serviceModeUpdateCb(clusterInfo.ServiceModes[0])
@@ -418,12 +418,12 @@ func (c *pdServiceDiscovery) updateMember() error {
 			}
 			// Still need to update TsoAllocatorLeaders, even if there is no PD leader
 			// Add taas client urls to members
-			// log.Info("zghtag", zap.String("updateMember",  members.GetLeader().GetDcLocation()))
+			// log.Info("taastag", zap.String("updateMember",  members.GetLeader().GetDcLocation()))
 			allMembers := members.GetMembers()
 			allocatorsWithTaasNodes := members.GetTsoAllocatorLeaders()
 			if allocatorsWithTaasNodes == nil {
 				allocatorsWithTaasNodes = make(map[string]*pdpb.Member)
-			} 
+			}
 			if allocatorsWithTaasNodes == nil {
 				allocatorsWithTaasNodes = members.GetTsoAllocatorLeaders()
 			}
@@ -436,8 +436,7 @@ func (c *pdServiceDiscovery) updateMember() error {
 					DcLocation: taasDCLocation,
 				}
 			}
-			// log.Info("zghtag", zap.Int("allMemberClientUrls", len(allocatorsWithTaasNodes)))
-
+			// log.Info("taastag", zap.Int("allMemberClientUrls", len(allocatorsWithTaasNodes)))
 
 			errTSO = c.switchTSOAllocatorLeaders(allocatorsWithTaasNodes)
 		}
@@ -569,7 +568,6 @@ func (c *pdServiceDiscovery) updateFollowers(members []*pdpb.Member, leader *pdp
 }
 
 func (c *pdServiceDiscovery) switchTSOAllocatorLeaders(allocatorMap map[string]*pdpb.Member) error {
-	//log.Info("zghtag", zap.String("switchTSOAllocatorLeaders", fmt.Sprintf("%d", len(allocatorMap))))
 	if len(allocatorMap) == 0 {
 		return nil
 	}
@@ -577,7 +575,7 @@ func (c *pdServiceDiscovery) switchTSOAllocatorLeaders(allocatorMap map[string]*
 	allocMap := make(map[string]string)
 	// Switch to the new one
 	for dcLocation, member := range allocatorMap {
-		//log.Info("zghtag", zap.String("switchTSOAllocatorLeaders", dcLocation))
+		//log.Info("taastag", zap.String("switchTSOAllocatorLeaders", dcLocation))
 		if len(member.GetClientUrls()) == 0 {
 			continue
 		}

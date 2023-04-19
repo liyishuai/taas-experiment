@@ -361,7 +361,6 @@ func NewClientWithKeyspace(ctx context.Context, keyspaceID uint32, svrAddrs []st
 }
 
 func (c *client) setup() error {
-	//fmt.Println("the client run set up once!!!!!!!!!!!")
 
 	c.Cache = sync.Map{}
 	c.taasMap = make(map[string]tsoStream)
@@ -409,17 +408,17 @@ func (c *client) setServiceMode(newMode pdpb.ServiceMode) {
 	// Re-create a new TSO client.
 	var (
 		newTSOCli          *tsoClient
-		newTaasCli		   *taasClient
+		newTaasCli         *taasClient
 		newTSOSvcDiscovery ServiceDiscovery
 	)
 	switch newMode {
 	case pdpb.ServiceMode_PD_SVC_MODE:
 		if c.option.clientType == taasDCLocation {
 			newTaasCli = newTaasClient(c.ctx, c.option, c.keyspaceID,
-			c.pdSvcDiscovery, &pdTSOStreamBuilderFactory{})
+				c.pdSvcDiscovery, &pdTSOStreamBuilderFactory{})
 		} else {
 			newTSOCli = newTSOClient(c.ctx, c.option, c.keyspaceID,
-			c.pdSvcDiscovery, &pdTSOStreamBuilderFactory{})
+				c.pdSvcDiscovery, &pdTSOStreamBuilderFactory{})
 		}
 	case pdpb.ServiceMode_API_SVC_MODE:
 		newTSOSvcDiscovery = newTSOServiceDiscovery(c.ctx, MetaStorageClient(c),
@@ -640,7 +639,6 @@ type Result struct {
 	Low  int64
 }
 
-
 func (c *client) GetTaasTSAsync(ctx context.Context, dcLocation string, M int32) TSFuture {
 	req := tsoReqPool.Get().(*tsoRequest)
 	req.requestCtx = ctx
@@ -651,11 +649,11 @@ func (c *client) GetTaasTSAsync(ctx context.Context, dcLocation string, M int32)
 	req.dcLocation = dcLocation
 
 	if taasClient == nil {
-		log.Error("zghtag: no taas client")
+		log.Error("taastag: no taas client")
 		req.done <- errs.ErrClientGetTSO
 		return req
 	}
-	// log.Info("zghtag: start dispatch taas req")
+	// log.Info("taastag: start dispatch taas req")
 	if err := taasClient.dispatchRequest(dcLocation, req); err != nil {
 		// Wait for a while and try again
 		// time.Sleep(50 * time.Millisecond)

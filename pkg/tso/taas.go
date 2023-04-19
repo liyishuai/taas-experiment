@@ -91,7 +91,7 @@ func (t *taasNode) setTaasLimit(syncTs int64) {
 func (t *taasNode) generateTaasTSO(ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
 	t.taasMux.Lock()
 	defer t.taasMux.Unlock()
-	// log.Info("zghtag", zap.Int64("taas generate tso", t.taasMux.tsHigh))
+	// log.Info("taastag", zap.Int64("taas generate tso", t.taasMux.tsHigh))
 
 	newTaasLevel := t.taasMux.tsHigh
 	if newTaasLevel < ts.Physical {

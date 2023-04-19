@@ -292,13 +292,13 @@ cl:
 	for	((i=1;i<=$(QUORUM_SIZE); i++)); do pkill -of 'pd-server --name=pd$$i'; sleep 1; done;
 
 taas: pd-tso-bench
-	./bin/pd-tso-bench  -client 5 -c 5 -duration 5s -pd $(LOCAL_IP):6010  -v -dc taas
+	./bin/pd-tso-bench  -client 5 -c 5 -duration 5s -pd $(LOCAL_IP):3020  -v -dc taas
 
 global: pd-tso-bench
-	./bin/pd-tso-bench  -client 5 -c 5 -duration 5s -pd $(LOCAL_IP):6010  -v
+	./bin/pd-tso-bench  -client 5 -c 5 -duration 5s -pd $(LOCAL_IP):3020  -v
 
 
 limit:
 	# curl -L http://`hostname -i`:6010/v3/kv/range -X POST -d '{"key": "dHRhCg=="}'
 
-.PHONY: pd bench cl limit
+.PHONY: pd taas global cl limit

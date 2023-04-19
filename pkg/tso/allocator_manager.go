@@ -363,7 +363,7 @@ func (am *AllocatorManager) SetUpAllocator(parentCtx context.Context, dcLocation
 	if dcLocation == GlobalDCLocation {
 		allocator = NewGlobalTSOAllocator(am, leadership)
 	} else if dcLocation == TaaSLocation {
-		log.Info("zghtag", zap.String("new allocator", dcLocation))
+		log.Info("taastag", zap.String("new allocator", dcLocation))
 		allocator = NewTaasTSOAllocator(am, leadership)
 	} else {
 		allocator = NewLocalTSOAllocator(am, leadership, dcLocation)
@@ -383,7 +383,7 @@ func (am *AllocatorManager) SetUpAllocator(parentCtx context.Context, dcLocation
 	if dcLocation == GlobalDCLocation {
 		return
 	} else if dcLocation == TaaSLocation {
-		log.Info("zghtag", zap.String("taas allocator loop", dcLocation))
+		log.Info("taastag", zap.String("taas allocator loop", dcLocation))
 		taasTSOAllocator, _ := allocator.(*TaasTSOAllocator)
 		go am.allocatorLeaderlessLoop(parentCtx, taasTSOAllocator)
 	} else {
@@ -1008,7 +1008,7 @@ func (am *AllocatorManager) deleteAllocatorGroup(dcLocation string) {
 
 // HandleTSORequest forwards TSO allocation requests to correct TSO Allocators.
 func (am *AllocatorManager) HandleTSORequest(dcLocation string, count uint32) (pdpb.Timestamp, error) {
-	// log.Info("zghtag", zap.String("HandleTSORequest", dcLocation))
+	// log.Info("taastag", zap.String("HandleTSORequest", dcLocation))
 	if dcLocation == "" {
 		dcLocation = GlobalDCLocation
 	}
@@ -1064,7 +1064,7 @@ func (am *AllocatorManager) getAllocatorGroup(dcLocation string) (*allocatorGrou
 	am.mu.RLock()
 	defer am.mu.RUnlock()
 	allocatorGroup, exist := am.mu.allocatorGroups[dcLocation]
-	// log.Info("zghtag", zap.Bool("getAllocatorGroup exist", exist))
+	// log.Info("taastag", zap.Bool("getAllocatorGroup exist", exist))
 	return allocatorGroup, exist
 }
 

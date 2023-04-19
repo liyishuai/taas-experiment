@@ -67,7 +67,7 @@ func (c *tsoClient) scheduleUpdateTSOConnectionCtxs() {
 
 func (c *tsoClient) dispatchRequest(dcLocation string, request *tsoRequest) error {
 	dispatcher, ok := c.tsoDispatcher.Load(dcLocation)
-	//log.Info("zghtag", zap.String("client dispatchRequest", dcLocation))
+	//log.Info("taastag", zap.String("client dispatchRequest", dcLocation))
 	if !ok {
 		err := errs.ErrClientGetTSO.FastGenByArgs(fmt.Sprintf("unknown dc-location %s to the client", dcLocation))
 		log.Error("[tso] dispatch tso request error", zap.String("dc-location", dcLocation), errs.ZapError(err))
@@ -114,7 +114,7 @@ func (c *tsoClient) updateTSODispatcher() {
 	// Set up the new TSO dispatcher and batch controller.
 	c.GetTSOAllocators().Range(func(dcLocationKey, _ interface{}) bool {
 		dcLocation := dcLocationKey.(string)
-		//log.Info("zghtag", zap.String("tsoClientCreate", dcLocation))
+		//log.Info("taastag", zap.String("tsoClientCreate", dcLocation))
 		if !c.checkTSODispatcher(dcLocation) {
 			c.createTSODispatcher(dcLocation)
 		}
@@ -124,8 +124,8 @@ func (c *tsoClient) updateTSODispatcher() {
 	c.tsoDispatcher.Range(func(dcLocationKey, dispatcher interface{}) bool {
 		dcLocation := dcLocationKey.(string)
 		// Skip the Global TSO Allocator
-		// TODO4zgh: add enum for taas
-		if dcLocation == globalDCLocation{
+		// TODO4taas: add enum for taas
+		if dcLocation == globalDCLocation {
 			return true
 		}
 		if _, exist := c.GetTSOAllocators().Load(dcLocation); !exist {
@@ -518,9 +518,8 @@ type tsoConnectionContext struct {
 
 func (c *tsoClient) updateTSOConnectionCtxs(updaterCtx context.Context, dc string, connectionCtxs *sync.Map) bool {
 	// Normal connection creating, it will be affected by the `enableForwarding`.
-	//fmt.Println("run get connectionc updateTSOConnectionCtxs 520")
 	createTSOConnection := c.tryConnectToTSO
-	if c.allowTSOFollowerProxy(dc){
+	if c.allowTSOFollowerProxy(dc) {
 		createTSOConnection = c.tryConnectToTSOWithProxy
 	}
 	if err := createTSOConnection(updaterCtx, dc, connectionCtxs); err != nil {
@@ -670,7 +669,7 @@ func (c *tsoClient) tryConnectToTSOWithProxy(dispatcherCtx context.Context, dc s
 	})
 	// Update the missing one.
 	for addr, tsoStreamBuilder := range tsoStreamBuilders {
-		//log.Info("zghtag", zap.String("tsoStreamBuilder", addr))
+		//log.Info("taastag", zap.String("tsoStreamBuilder", addr))
 		if _, ok = connectionCtxs.Load(addr); ok {
 			continue
 		}
