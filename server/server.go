@@ -403,7 +403,6 @@ func (s *Server) startServer(ctx context.Context) error {
 		// Set up the Global TSO Allocator here, it will be initialized once the PD campaigns leader successfully.
 		s.tsoAllocatorManager.SetUpAllocator(ctx, tso.GlobalDCLocation, s.member.GetLeadership())
 
-		// For taas TODO4zgh: add specific cfgs for taas
 		s.taasAllocatorManager = tso.NewAllocatorManager(
 			s.member, s.rootPath, s.storage, s.cfg.IsLocalTSOEnabled(), s.cfg.GetTSOSaveInterval(), s.cfg.GetTSOUpdatePhysicalInterval(), s.cfg.GetTLSConfig(),
 			func() time.Duration { return s.persistOptions.GetMaxResetTSGap() })

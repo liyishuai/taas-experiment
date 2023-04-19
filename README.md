@@ -1,3 +1,14 @@
+# File-to-Pseudo Mapping
+|Peseudo in paper|File|Function|
+|-|-|-|
+|line 407-434|client/taas_dispatcher.go| dispatchRequest|
+|line 435-443|client/taas_dispatcher.go| "inline implementation"|
+|line 445-449|client/taas_dispatcher.go| sndAndRcv|
+|line 697-709|pkg/tso/taas.go|generateTaasTSO|
+|line 710-714|pkg/tso/taas.go|Initialize|
+|line 715-718|pkg/tso/taas.go|reserveTaasLimit|
+
+
 # Run TSO bench in PD
 ### 编译
 ```
@@ -5,17 +16,24 @@ make
 ```
 
 ### 本地多节点PD server
-** 启动 **
+**启动**
 ```
 make pd
 ```
 
-** 停止 **
+**停止**
 ```
 make cl
 ```
 
 ### 启动本地 tso-bench
+
+**启动tidb-pd tso的测试**
+```
+make global
+```
+
+**启动taas的测试**
 ```
 编译运行taas
 make taas CLIENT_NUM=20 CURRENCY_NUM=10 TEST_TIME=5m LOCAL_IP=11.158.168.215:5010 LOG_PATH=tt.log

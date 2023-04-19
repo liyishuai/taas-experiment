@@ -304,12 +304,10 @@ cl:
 
 taas: pd-tso-bench
 	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc taas > $(LOG_PATH)
-	grep secdata: $(LOG_PATH)|awk -F '[:|,]' '{print $$2,$$6,$$7,$$8,$$9}' 
 global: pd-tso-bench
 	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc global > $(LOG_PATH)
-	grep secdata: $(LOG_PATH)|awk -F '[:|,]' '{print $$2,$$6,$$7,$$8,$$9}' 
 
 limit:
 	# curl -L http://`hostname -i`:6010/v3/kv/range -X POST -d '{"key": "dHRhCg=="}'
 
-.PHONY: pd bench cl limit
+.PHONY: pd taas global cl limit

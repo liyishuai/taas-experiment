@@ -1,12 +1,12 @@
-rm -rf ./pd/*
-rm -rf ./pd.log
+#rm -rf ./pd/*
+#rm -rf ./pd.log
 
 WORKDIR=`pwd`
 HOST_IP=`hostname -i`
-QUORUM_SIZE=3
+QUORUM_SIZE=5
 MYID=${WORKDIR:${#WORKDIR}-1}
-CLIENT_BASE_PORT=3000
-PEER_BASE_PORT=4000
+CLIENT_BASE_PORT=5000
+PEER_BASE_PORT=6000
 CLIENT_PORT=$[ $CLIENT_BASE_PORT + 10 * ${MYID} ]
 PEER_PORT=$[ $PEER_BASE_PORT + 10 * ${MYID}]
 echo "MYID: "$MYID
@@ -28,11 +28,9 @@ function gen_member(){
 
 PARA=""
 PARA=$PARA" --client-urls=http://${HOST_IP}:${CLIENT_PORT}"" --peer-urls=http://${HOST_IP}:${PEER_PORT}"
-PARA=$PARA" --initial-cluster="$(gen_member $QUORUM_SIZE $PEER_BASE_PORT)
-
-# if ! [ $MYID == 1 ];then
-#     PARA=$PARA" --join="$(gen_member $[ $MYID - 1 ] $CLIENT_BASE_PORT)
-# fi
+if [ "$1" = "start" ]; then
+     PARA=$PARA" --initial-cluster="$(gen_member $QUORUM_SIZE $PEER_BASE_PORT $1)
+fi
 echo "PARA: "$PARA
 
 nohup ./pd-server --name="pd$MYID" --data-dir="pd"  --log-file=pd.log $PARA 2>&1 &
