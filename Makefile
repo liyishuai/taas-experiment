@@ -16,6 +16,17 @@ BUILD_FLAGS ?=
 BUILD_TAGS ?=
 BUILD_CGO_ENABLED := 0
 PD_EDITION ?= Community
+CLIENT_NUM ?=
+CURRENCY_NUM ?=
+CONSENSUS_TYPE?=
+TEST_TIME?=
+LS?=
+LOG_PATH?=
+
+IPLIST?=
+QUROMSIZE?=
+INDEX?=
+RESTART?=
 # Ensure PD_EDITION is set to Community or Enterprise before running build process.
 ifneq "$(PD_EDITION)" "Community"
 ifneq "$(PD_EDITION)" "Enterprise"
@@ -282,21 +293,21 @@ clean-build:
 
 
 ### Run tso benchmark locally
-QUORUM_SIZE := 3
+QUORUM_SIZE := 5
 LOCAL_IP := $(shell hostname -i)
 pd: 
-	cd playground; for ((i=1;i<=$(QUORUM_SIZE); i++));do mkdir -p p$$i; cd p$$i && ln -s ../../bin/pd-server ./pd-server && cp ../run.sh ./ && ./run.sh && cd -; done
+	cd playground; for ((i=1;i<=$(QUORUM_SIZE); i++));do mkdir -p p$$i; cd p$$i && ln -s ../../bin/pd-server ./pd-server && cp ../run.sh ./ && ./run.sh start && cd -; done
 
 cl:
 	cd playground; for	((i=1;i<=$(QUORUM_SIZE); i++)); do rm -rf p$$i; done;
 	for	((i=1;i<=$(QUORUM_SIZE); i++)); do pkill -of 'pd-server --name=pd$$i'; sleep 1; done;
 
 taas: pd-tso-bench
-	./bin/pd-tso-bench  -client 5 -c 5 -duration 5s -pd $(LOCAL_IP):6010  -v -dc taas
-
+	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc taas > $(LOG_PATH)
+	grep secdata: $(LOG_PATH)|awk -F '[:|,]' '{print $$2,$$6,$$7,$$8,$$9}' 
 global: pd-tso-bench
-	./bin/pd-tso-bench  -client 5 -c 5 -duration 5s -pd $(LOCAL_IP):6010  -v
-
+	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc global > $(LOG_PATH)
+	grep secdata: $(LOG_PATH)|awk -F '[:|,]' '{print $$2,$$6,$$7,$$8,$$9}' 
 
 limit:
 	# curl -L http://`hostname -i`:6010/v3/kv/range -X POST -d '{"key": "dHRhCg=="}'
