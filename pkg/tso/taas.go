@@ -43,7 +43,6 @@ type taasNode struct {
 	// When ltsPath is empty, it means that it is a global timestampOracle.
 	ttsPath string
 	storage endpoint.TSOStorage
-	// TODO: remove saveInterval
 	saveInterval           time.Duration
 	updatePhysicalInterval time.Duration
 	maxResetTSGap          func() time.Duration
@@ -91,8 +90,6 @@ func (t *taasNode) setTaasLimit(syncTs int64) {
 func (t *taasNode) generateTaasTSO(ts *pdpb.Timestamp) (pdpb.Timestamp, error) {
 	t.taasMux.Lock()
 	defer t.taasMux.Unlock()
-	// log.Info("taastag", zap.Int64("taas generate tso", t.taasMux.tsHigh))
-
 	newTaasLevel := t.taasMux.tsHigh
 	if newTaasLevel < ts.Physical {
 		newTaasLevel = ts.Physical
