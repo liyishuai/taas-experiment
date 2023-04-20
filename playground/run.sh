@@ -2,7 +2,12 @@
 #rm -rf ./pd.log
 
 WORKDIR=`pwd`
-HOST_IP=`hostname -i`
+#HOST_IP=`hostname -i`
+if hostname -i >/dev/null 2>&1; then
+  HOST_IP=$(hostname -i)
+else
+  HOST_IP=$(ipconfig getifaddr en0)
+fi
 QUORUM_SIZE=5
 MYID=${WORKDIR:${#WORKDIR}-1}
 CLIENT_BASE_PORT=5000

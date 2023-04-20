@@ -294,7 +294,7 @@ clean-build:
 
 ### Run tso benchmark locally
 QUORUM_SIZE := 5
-LOCAL_IP := $(shell hostname -i)
+LOCAL_IP ?=
 pd: 
 	cd playground; for ((i=1;i<=$(QUORUM_SIZE); i++));do mkdir -p p$$i; cd p$$i && ln -s ../../bin/pd-server ./pd-server && cp ../run.sh ./ && ./run.sh start && cd -; done
 

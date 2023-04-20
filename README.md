@@ -13,6 +13,7 @@
 ### 编译
 ```
 make
+环境要求：go的版本为1.20
 ```
 
 ### 本地多节点PD server
@@ -33,12 +34,13 @@ make cl
 make global
 ```
 
-**启动taas的测试**
+**启动taas测试**
 ```
-编译运行taas
-make taas CLIENT_NUM=20 CURRENCY_NUM=10 TEST_TIME=5m LOCAL_IP=11.158.168.215:5010 LOG_PATH=tt.log
+编译运行taas客户端
+LOCAL_IP=xxxx （自己本机的ip，port为使用的客户端口,默认为5010、5020...）
+make taas CLIENT_NUM=20 CURRENCY_NUM=10 TEST_TIME=5m LOCAL_IP=${LOCAL_IP}:5010 LOG_PATH=tt.log
 编译运行tso
-make global CLIENT_NUM=20 CURRENCY_NUM=10 TEST_TIME=5m LOCAL_IP=11.158.168.215:5010 LOG_PATH=tt.log
+make global CLIENT_NUM=20 CURRENCY_NUM=10 TEST_TIME=5m LOCAL_IP=${LOCAL_IP}:5010 LOG_PATH=tt.log
 client_num为对应的客户端数目
 currency_num为对应的协程数 总协程数目 client_num*currency_num
 test_time 为对应时间，注意为time.duration格式
@@ -48,13 +50,12 @@ log_path为日志路径
 ```
 ### failover操作进程
 tso kill leader:
-bash ctrl.sh  "11.158.168.215:5010;11.158.168.215:5020;11.158.168.215:5030;11.158.168.215:5040;11.158.168.215:5050" kill tso
+bash ctrl.sh  "${LOCAL_IP}:5010;${LOCAL_IP}:5020;${LOCAL_IP}:5030;${LOCAL_IP}:5040;${LOCAL_IP}:5050" kill tso
 2 taas 随机kill 一个机器：
-bash ctrl.sh  "11.158.168.215:5010;11.158.168.215:5020;11.158.168.215:5030;11.158.168.215:5040;11.158.168.215:5050" kill taas
-
+bash ctrl.sh  "${LOCAL_IP}:5010;${LOCAL_IP}:5020;${LOCAL_IP}:5030;${LOCAL_IP}:5040;${LOCAL_IP}:5050" kill taas
 拉起一个进程：
-bash ctrl.sh  "11.158.168.215:5010;11.158.168.215:5020;11.158.168.215:5030;11.158.168.215:5040;11.158.168.215:5050" create tso
-bash ctrl.sh  "11.158.168.215:5010;11.158.168.215:5020;11.158.168.215:5030;11.158.168.215:5040;11.158.168.215:5050" create taas
+bash ctrl.sh  "${LOCAL_IP}:5010;${LOCAL_IP}:5020;${LOCAL_IP}:5030;${LOCAL_IP}:5040;${LOCAL_IP}:5050" create tso
+bash ctrl.sh  "${LOCAL_IP}:5010;${LOCAL_IP}:5020;${LOCAL_IP}:5030;${LOCAL_IP}:5040;${LOCAL_IP}:5050" create taas
 
 ### 查看数据
 默认运行一分钟,结果保存在tso_bench.log中,查看最终统计结果
