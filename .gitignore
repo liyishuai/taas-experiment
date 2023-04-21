@@ -2,3 +2,4 @@ bin/
 .vscode/
 playground/p*
 .DS_Store
+*.log

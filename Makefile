@@ -16,12 +16,13 @@ BUILD_FLAGS ?=
 BUILD_TAGS ?=
 BUILD_CGO_ENABLED := 0
 PD_EDITION ?= Community
-CLIENT_NUM ?=
-CURRENCY_NUM ?=
+CLIENT_NUM ?=1
+CURRENCY_NUM ?=1
 CONSENSUS_TYPE?=
-TEST_TIME?=
+TEST_TIME?=5m
 LS?=
-LOG_PATH?=
+LOG_PATH?=tt.log
+LOCAL_IP?=localhost:5010
 
 IPLIST?=
 QUROMSIZE?=
@@ -303,9 +304,9 @@ cl:
 	for	((i=1;i<=$(QUORUM_SIZE); i++)); do pkill -of 'pd-server --name=pd$$i'; sleep 1; done;
 
 taas: pd-tso-bench
-	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc taas > $(LOG_PATH)
+	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc taas | tee $(LOG_PATH)
 global: pd-tso-bench
-	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc global > $(LOG_PATH)
+	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc global | tee $(LOG_PATH)
 
 limit:
 	# curl -L http://`hostname -i`:6010/v3/kv/range -X POST -d '{"key": "dHRhCg=="}'
