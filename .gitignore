@@ -3,3 +3,4 @@ bin/
 playground/p*
 .DS_Store
 *.log
+main

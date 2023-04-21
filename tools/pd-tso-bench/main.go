@@ -159,7 +159,7 @@ func bench(mainCtx context.Context) {
 
 	wg.Wait()
 
-	fmt.Println("the everything dead")
+	fmt.Println("all dead")
 	for _, pdCli := range pdClients {
 		pdCli.Close()
 	}
@@ -185,25 +185,25 @@ func showStats(ctx context.Context, durCh chan time.Duration) {
 		select {
 		case <-ticker.C:
 			// runtime.GC()
-			if *verbose {
-				fmt.Printf(s.Counter())
-			}
+			// if *verbose {
+			// 	fmt.Printf(s.Counter())
+			// }
 			//gingindex=gindex+1
-			fmt.Printf(",%.4f,%.4f,%.4f,%.4f\n", latencyTDigestSec.Quantile(0.5), latencyTDigestSec.Quantile(0.8), latencyTDigestSec.Quantile(0.9), latencyTDigestSec.Quantile(0.99))
+			// fmt.Printf(",%.4f,%.4f,%.4f,%.4f\n", latencyTDigestSec.Quantile(0.5), latencyTDigestSec.Quantile(0.8), latencyTDigestSec.Quantile(0.9), latencyTDigestSec.Quantile(0.99))
 			latencyTDigestSec.Reset()
 			total.merge(s)
 			s = newStats()
 		case d := <-durCh:
 			s.update(d)
 		case <-statCtx.Done():
-			fmt.Println("\nTotal:")
-			fmt.Println(total.Counter())
-			fmt.Println(total.Percentage())
+			// fmt.Println("\nTotal:")
+			// fmt.Println(total.Counter())
+			// fmt.Println(total.Percentage())
 			// Calculate the percentiles by using the tDigest algorithm.
-			fmt.Printf("P0.5: %.4fms, P0.8: %.4fms, P0.9: %.4fms, P0.99: %.4fms\n\n", latencyTDigest.Quantile(0.5), latencyTDigest.Quantile(0.8), latencyTDigest.Quantile(0.9), latencyTDigest.Quantile(0.99))
-			if *verbose {
-				fmt.Println(collectMetrics(promServer))
-			}
+			// fmt.Printf("P0.5: %.4fms, P0.8: %.4fms, P0.9: %.4fms, P0.99: %.4fms\n\n", latencyTDigest.Quantile(0.5), latencyTDigest.Quantile(0.8), latencyTDigest.Quantile(0.9), latencyTDigest.Quantile(0.99))
+			// if *verbose {
+			// 	fmt.Println(collectMetrics(promServer))
+			// }
 			return
 		}
 	}
@@ -387,19 +387,21 @@ func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration, r
 		start := time.Now()
 		for ; i < maxRetryTime; i++ {
 			err = error(nil)
+			var resultHigher, resultLower int64
 			if *dcLocation == taasDCLocation {
-				_, _, err = pdCli.GetTaasTS(reqCtx, *dcLocation, 2)
+				resultHigher, resultLower, err = pdCli.GetTaasTS(reqCtx, *dcLocation, 2)
 			} else {
-				_, _, err = pdCli.GetLocalTS(reqCtx, *dcLocation)
+				resultHigher, resultLower, err = pdCli.GetLocalTS(reqCtx, *dcLocation)
 			}
 			if errors.Cause(err) == context.Canceled {
 				return
-			}
-			if err == nil {
+			} else if err == nil {
+				log.Info(fmt.Sprint(resultHigher, resultLower))
 				break
+			} else {
+				// log.Error(fmt.Sprintf("%v", err))
+				time.Sleep(sleepIntervalOnFailure)
 			}
-			// log.Error(fmt.Sprintf("%v", err))
-			time.Sleep(sleepIntervalOnFailure)
 		}
 		if err != nil {
 			log.Fatal(fmt.Sprintf("%v", err))

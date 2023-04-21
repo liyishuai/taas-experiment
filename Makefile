@@ -22,7 +22,6 @@ CONSENSUS_TYPE?=
 TEST_TIME?=5m
 LS?=
 LOG_PATH?=tt.log
-LOCAL_IP?=localhost:5010
 
 IPLIST?=
 QUROMSIZE?=
@@ -295,7 +294,7 @@ clean-build:
 
 ### Run tso benchmark locally
 QUORUM_SIZE := 5
-LOCAL_IP ?=
+LOCAL_IP ?=localhost:5010
 pd: 
 	cd playground; for ((i=1;i<=$(QUORUM_SIZE); i++));do mkdir -p p$$i; cd p$$i && ln -s ../../bin/pd-server ./pd-server && cp ../run.sh ./ && ./run.sh start && cd -; done
 
