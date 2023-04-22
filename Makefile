@@ -295,12 +295,16 @@ clean-build:
 ### Run tso benchmark locally
 QUORUM_SIZE := 5
 LOCAL_IP ?=localhost:5010
-pd: 
-	cd playground; for ((i=1;i<=$(QUORUM_SIZE); i++));do mkdir -p p$$i; cd p$$i && ln -s ../../bin/pd-server ./pd-server && cp ../run.sh ./ && ./run.sh start && cd -; done
+pd: pd_1 pd_2 pd_3 pd_4 pd_5
+	pgrep pd-server
+
+pd_%:
+	cd playground; mkdir -p p$*; cd p$* && ln -f -s ../../bin/pd-server ./pd-server && cp ../run.sh ./ && ./run.sh start
 
 cl:
-	cd playground; for	((i=1;i<=$(QUORUM_SIZE); i++)); do rm -rf p$$i; done;
-	for	((i=1;i<=$(QUORUM_SIZE); i++)); do pkill -of 'pd-server --name=pd$$i'; sleep 1; done;
+	$(RM) -r playground/p*
+	-pkill pd-server
+	pgrep pd-server
 
 taas: pd-tso-bench
 	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc taas | tee $(LOG_PATH)

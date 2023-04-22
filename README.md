@@ -1,64 +1,91 @@
-# File-to-Pseudo Mapping
-|Peseudo in paper|File|Function|
-|-|-|-|
-|line 407-434|client/taas_dispatcher.go| dispatchRequest|
-|line 435-443|client/taas_dispatcher.go| "inline implementation"|
-|line 445-449|client/taas_dispatcher.go| sndAndRcv|
-|line 697-709|pkg/tso/taas.go|generateTaasTSO|
-|line 710-714|pkg/tso/taas.go|Initialize|
-|line 715-718|pkg/tso/taas.go|reserveTaasLimit|
+# Evaluation of paper _Timestamp as a Service, not an Oracle_
 
+We forked [tikv/pd](https://github.com/tikv/pd) from commit [`19f7dd9`](https://github.com/tikv/pd/commit/19f7dd98b087a7435fd63d8f38752ee1b3992cbb),
+and injected the TaaS algorithm into the codebase to compare the performance.
 
-# Run TSO bench in PD
-### 编译
-```
+## Build and run
+Tested with Go version 1.20.3:
+```shell
+# Compile the client and servers
 make
-环境要求：go的版本为1.20
-```
 
-### 本地多节点PD server
-**启动**
-```
+# Launch the servers (that serve both TaaS and TiDB requests)
 make pd
-```
 
-**停止**
-```
-make cl
-```
+# Run the TaaS client
+make taas
 
-### 启动本地 tso-bench
-
-**启动tidb-pd tso的测试**
-```
+# Run the TiDB client
 make global
 ```
 
-**启动taas测试**
-```
-编译运行taas客户端
-LOCAL_IP=xxxx （自己本机的ip，port为使用的客户端口,默认为5010、5020...）
-make taas CLIENT_NUM=20 CURRENCY_NUM=10 TEST_TIME=5m LOCAL_IP=${LOCAL_IP}:5010 LOG_PATH=tt.log
-编译运行tso
-make global CLIENT_NUM=20 CURRENCY_NUM=10 TEST_TIME=5m LOCAL_IP=${LOCAL_IP}:5010 LOG_PATH=tt.log
-client_num为对应的客户端数目
-currency_num为对应的协程数 总协程数目 client_num*currency_num
-test_time 为对应时间，注意为time.duration格式
-local_ip为测试ip。
-log_path为日志路径
+## Read the logs
+### TaaS
+Example log entry:
+> [2023/04/22 13:34:53.116 +00:00] [INFO] [main.go:399] ["312541 5154600750196961478"]
 
-```
-### failover操作进程
-tso kill leader:
-bash ctrl.sh  "${LOCAL_IP}:5010;${LOCAL_IP}:5020;${LOCAL_IP}:5030;${LOCAL_IP}:5040;${LOCAL_IP}:5050" kill tso
-2 taas 随机kill 一个机器：
-bash ctrl.sh  "${LOCAL_IP}:5010;${LOCAL_IP}:5020;${LOCAL_IP}:5030;${LOCAL_IP}:5040;${LOCAL_IP}:5050" kill taas
-拉起一个进程：
-bash ctrl.sh  "${LOCAL_IP}:5010;${LOCAL_IP}:5020;${LOCAL_IP}:5030;${LOCAL_IP}:5040;${LOCAL_IP}:5050" create tso
-bash ctrl.sh  "${LOCAL_IP}:5010;${LOCAL_IP}:5020;${LOCAL_IP}:5030;${LOCAL_IP}:5040;${LOCAL_IP}:5050" create taas
+The conclusion timestamp is `312541 5154600750196961478`, where:
+- The higher bits `312541` represent the logical counter.
+- The lower bits `5154600750196961478` identify the responding server.
 
-### 查看数据
-默认运行一分钟,结果保存在tso_bench.log中,查看最终统计结果
+### TiDB-PD
+Example log entry:
+> [2023/04/22 14:09:56.238 +00:00] [INFO] [main.go:399] ["1682143796231 35"]
+
+The conclusion timestamp is `1682143796231 35`, where:
+- The higher bits `1682143796231` come from the physical timer.
+- The lower bits `35` represent the logical counter within each millisecond.
+
+## Tamper the cluster
+Running `make pd` prints the process identifiers of the five servers in order, e.g.:
+> 94519
+95167
+95497
+95812
+96128
+
+To kill a process, specify its corresponding identifier.  For the previous example:
+```shell
+kill 94519 # Server 1
+kill 95167 # Server 2
 ```
-grep secdata: tt.log|awk -F '[:|,]' '{print $2,$6,$7,$8,$9}'
+
+You can also replace the killed servers with new machines, e.g.:
+```shell
+make pd_1 pd_2 # Resume Servers 1 and 2
 ```
+
+## Finish and cleanup
+```shell
+make cl
+```
+Expect `pgrep pd-server` to print empty results.
+If the `pd-server` processes aren't purged, try re-running `pkill pd-server`.
+
+## Navigate through the lines
+Our pseudocode in the paper corresponds to the codebase as follows.
+
+### Client side
+- The core mechanism of the TaaS `client()` on Page 4 Lines 407--434 (Figure 4 Lines 1--27)
+  maps to `client/taas_dispatcher.go` as the `dispatchRequest` function.
+- The `snd_rcv` function on Page 4 Lines 445--440 (Figure 4 Lines 39--43)
+  maps to `client/taas_dispatcher.go` as the `sndAndRcv` function.
+- The `update` function on Page 4 Lines 435--443 (Figure 4 Lines 29--37)
+  is to provide a clean, functional-style abstraction of state transition.
+  In this codebase:
+  + The session data is updated right before determining the candidate in `dispatchRequest`,
+    just like that shown in the pseudocode;
+  + The cache data is updated within the asynchronous `sndAndRcv` routine,
+    before inserting the response into the event channel,
+    unlike the pseudocode that updates the cache after taking the response out of the event channel.
+    We believe that the earlier the cache gets updated, the earlier the sessions might conclude.
+
+### Server side
+- The upper-bound-reservation mechanism of the TaaS server on Page 7 Lines 715--718 (Figure 8 Lines 19-22)
+  maps to `pkg/tso/taas.go` as the `reserveTaasLimit` function.
+- The `Tick()` function on Page 7 Lines 697--709 (Figure 8 Lines 1--12)
+  maps to `pkg/tso/taas.go` as the `generateTaasTSO` function,
+  with the blocking and non-blocking reservation logic defined in the `setTaasHigh` function.
+- The failure recovery `init()` function on Page 7 Lines 710--714 (Figure 8 Lines 14--17)
+  maps to `pkg/tso/taas.go` as the `Initialize` function,
+  with the blocking reservation done by calling the `setTaasHigh` function.
