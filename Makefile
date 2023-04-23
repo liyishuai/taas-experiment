@@ -304,8 +304,7 @@ pd_%:
 
 cl:
 	$(RM) -r playground/p*
-	-pkill pd-server
-	pgrep pd-server
+	-while pkill pd-server; do echo 'Waiting for the servers to halt:'; pgrep pd-server; sleep 1; done
 
 test-taas: pd-tso-bench
 	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc taas | tee $(LOG_PATH)

@@ -61,11 +61,10 @@ of each server process, uncomment the `# pgrep pd-server` command in the `pd_%`
 target of the `Makefile`.
 
 ## Finish and cleanup
+To halt the servers running in the background:
 ```shell
 make cl
 ```
-Expect `pgrep pd-server` to print empty results.
-If the `pd-server` processes aren't purged, try re-running `pkill pd-server`.
 
 ## Navigate through the lines
 Our pseudocode in the paper corresponds to the codebase as follows.
