@@ -300,18 +300,20 @@ pd: pd_1 pd_2 pd_3 pd_4 pd_5
 
 pd_%:
 	cd playground; mkdir -p p$*; cd p$* && ln -f -s ../../bin/pd-server ./pd-server && cp ../run.sh ./ && ./run.sh start
+	# pgrep pd-server
 
 cl:
 	$(RM) -r playground/p*
 	-pkill pd-server
 	pgrep pd-server
 
-taas: pd-tso-bench
+test-taas: pd-tso-bench
 	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc taas | tee $(LOG_PATH)
-global: pd-tso-bench
+
+test-tidb: pd-tso-bench
 	./bin/pd-tso-bench  -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP)  -v -dc global | tee $(LOG_PATH)
 
 limit:
 	# curl -L http://`hostname -i`:6010/v3/kv/range -X POST -d '{"key": "dHRhCg=="}'
 
-.PHONY: pd taas global cl limit
+.PHONY: pd test-taas test-tidb cl limit

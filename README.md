@@ -13,10 +13,10 @@ make
 make pd
 
 # Run the TaaS client
-make taas
+make test-taas
 
 # Run the TiDB client
-make global
+make test-tidb
 ```
 
 ## Read the logs
@@ -54,6 +54,11 @@ You can also replace the killed servers with new machines, e.g.:
 ```shell
 make pd_1 pd_2 # Resume Servers 1 and 2
 ```
+
+The process identifiers are listed numerically, which in most cases correspond
+to the order in which the servers are created.  To determine the exact identifer
+of each server process, uncomment the `# pgrep pd-server` command in the `pd_%`
+target of the `Makefile`.
 
 ## Finish and cleanup
 ```shell
