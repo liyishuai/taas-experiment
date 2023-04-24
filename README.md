@@ -36,7 +36,7 @@ The conclusion timestamp is `1682143796231 35`, where:
 - The higher bits `1682143796231` come from the physical timer.
 - The lower bits `35` represent the logical counter within each millisecond.
 
-## Tamper the cluster
+## Tamper with the cluster
 Running `make pd` prints the process identifiers of the five servers in order, e.g.:
 > 94519
 95167
