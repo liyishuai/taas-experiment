@@ -16,7 +16,6 @@ package tso
 
 import (
 	"github.com/pingcap/kvproto/pkg/pdpb"
-	"github.com/tikv/pd/pkg/election"
 )
 
 // TaasTSOAllocator is a global TSO allocator using TaaS algorithm.
@@ -30,15 +29,13 @@ type TaasTSOAllocator struct {
 // NewTaasTSOAllocator creates a new Taas TSO allocator.
 func NewTaasTSOAllocator(
 	am *AllocatorManager,
-	leadership *election.Leadership,
 ) Allocator {
 	tta := &TaasTSOAllocator{
 		allocatorManager: am,
 		taasNode: &taasNode{
-			client:                 leadership.GetClient(),
 			nodeId:                 int64(am.member.ID()),
 			rootPath:               am.rootPath,
-			ttsPath:                "tts",
+			ttsPath:                am.tsLimitPath,
 			storage:                am.storage,
 			saveInterval:           am.saveInterval,
 			updatePhysicalInterval: am.updatePhysicalInterval,

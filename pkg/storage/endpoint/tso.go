@@ -15,7 +15,11 @@
 package endpoint
 
 import (
+	"bufio"
 	"context"
+	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -92,55 +96,49 @@ func (se *StorageEndpoint) SaveTimestamp(key string, ts time.Time) error {
 	})
 }
 
-func (se *StorageEndpoint) LoadTaasTimestamp(prefix string) (int64, error) {
-	prefixEnd := clientv3.GetPrefixRangeEnd(prefix)
-	keys, values, err := se.LoadRange(prefix, prefixEnd, 0)
+func (se *StorageEndpoint) LoadTaasTimestamp(filePath string) (int64, error) {
+	file, err := os.Open(filePath)
 	if err != nil {
+		// file not exist, start from 0
+		return 0, err
+	}
+	defer file.Close()
+
+	reader := bufio.NewReader(file)
+	dataStr, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Read from file error:", err)
 		return -1, err
 	}
-	if len(keys) == 0 {
-		return 0, nil
-	}
-	maxTs := uint64(0)
-	for i, key := range keys {
-		key := strings.TrimSpace(key)
-		if !strings.HasSuffix(key, timestampKey) {
-			continue
-		}
-		ts, err := typeutil.BytesToUint64([]byte(values[i]))
-		if err != nil {
-			log.Error("parse timestamp window that from etcd failed", zap.String("ts-window-key", key), zap.Error(err))
-			continue
-		}
-		if ts > maxTs {
-			maxTs = ts
-		}
 
+	var maxTs uint64
+	maxTs, err = strconv.ParseUint(strings.TrimSpace(dataStr), 10, 64)
+	if err != nil {
+		fmt.Println("Convert data error:", err)
+		return -1, err
 	}
 	return int64(maxTs), nil
 }
 
 // TickTimestamp saves the timestamp to the storage.
-func (se *StorageEndpoint) BumpTaasTimestamp(key string, ts int64) error {
-	return se.RunInTxn(context.Background(), func(txn kv.Txn) error {
-		value, err := txn.Load(key)
-		if err != nil {
-			return err
-		} else {
-			previousTS := uint64(0)
-			if value != "" {
-				previousTS, err = typeutil.BytesToUint64([]byte(value))
-				if err != nil {
-					log.Error("parse timestamp failed", zap.String("key", key), zap.String("value", value), zap.Error(err))
-					return err
-				}
-			}
-			if int64(previousTS) > ts {
-				log.Info("TaasTag: previous ts > current limit", zap.Int64("previousTS", int64(previousTS)), zap.Int64("cur", ts))
-				return nil
-			}
-			data := typeutil.Uint64ToBytes(uint64(ts))
-			return txn.Save(key, string(data))
-		}
-	})
+func (se *StorageEndpoint) BumpTaasTimestamp(filePath string, ts int64) error {
+	currentTs := uint64(ts)
+	file, err := os.Create(filePath)
+	if err != nil {
+		fmt.Println("Create file error:", err)
+		return	err
+	}
+	defer file.Close()	
+
+	writer := bufio.NewWriter(file)
+
+	_, err = fmt.Fprintf(writer, "%d", currentTs)
+	if err != nil {
+		return err
+	}
+	err = writer.Flush()
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -23,7 +23,6 @@ import (
 	"github.com/pingcap/log"
 	"github.com/tikv/pd/pkg/storage/endpoint"
 	"github.com/tikv/pd/pkg/utils/syncutil"
-	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
 )
 
@@ -37,7 +36,6 @@ type taasObject struct {
 
 // taasNode is used to maintain the logic timestamp in memory and limit in etcd
 type taasNode struct {
-	client   *clientv3.Client
 	nodeId   int64
 	rootPath string
 	// When ltsPath is empty, it means that it is a global timestampOracle.

@@ -156,6 +156,7 @@ type AllocatorManager struct {
 	member Member
 	// TSO config
 	rootPath               string
+	tsLimitPath 		   string
 	storage                endpoint.TSOStorage
 	saveInterval           time.Duration
 	updatePhysicalInterval time.Duration
@@ -172,6 +173,7 @@ type AllocatorManager struct {
 func NewAllocatorManager(
 	m Member,
 	rootPath string,
+	tsLimitPath string,
 	storage endpoint.TSOStorage,
 	enableLocalTSO bool,
 	saveInterval time.Duration,
@@ -183,6 +185,7 @@ func NewAllocatorManager(
 		enableLocalTSO:         enableLocalTSO,
 		member:                 m,
 		rootPath:               rootPath,
+		tsLimitPath: 			tsLimitPath,	
 		storage:                storage,
 		saveInterval:           saveInterval,
 		updatePhysicalInterval: updatePhysicalInterval,
@@ -364,7 +367,7 @@ func (am *AllocatorManager) SetUpAllocator(parentCtx context.Context, dcLocation
 		allocator = NewGlobalTSOAllocator(am, leadership)
 	} else if dcLocation == TaaSLocation {
 		log.Info("taastag", zap.String("new allocator", dcLocation))
-		allocator = NewTaasTSOAllocator(am, leadership)
+		allocator = NewTaasTSOAllocator(am)
 	} else {
 		allocator = NewLocalTSOAllocator(am, leadership, dcLocation)
 	}
