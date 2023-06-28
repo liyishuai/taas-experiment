@@ -1,0 +1,17 @@
+ServerEndpoint:
+  - 33.2.128.6
+  - 33.27.167.217
+  - 33.27.167.218
+  - 33.64.128.222
+  - 33.64.128.223
+ClientEndpoint:
+  - 33.2.128.5
+  - 33.27.167.216
+  - 33.64.128.182
+TestTime: 3m
+KillTime:
+  - 1m
+ClientNum: 10
+ClientLogName: 626-taas.log
+ConsensusType: taas
+Concurency: 10

@@ -177,6 +177,9 @@ func showStats(ctx context.Context, durCh chan time.Duration) {
 	ticker := time.NewTicker(*interval)
 	defer ticker.Stop()
 
+	minuteTicker := time.NewTicker(time.Minute)
+	defer minuteTicker.Stop()
+
 	s := newStats()
 	total := newStats()
 
@@ -185,25 +188,31 @@ func showStats(ctx context.Context, durCh chan time.Duration) {
 		select {
 		case <-ticker.C:
 			// runtime.GC()
-			// if *verbose {
-			// 	fmt.Printf(s.Counter())
-			// }
+			if *verbose {
+				fmt.Printf("%s%.4f,%.4f\n", s.Counter(), latencyTDigestSec.Quantile(0.5), latencyTDigestSec.Quantile(0.99))
+			}
 			//gingindex=gindex+1
-			// fmt.Printf(",%.4f,%.4f,%.4f,%.4f\n", latencyTDigestSec.Quantile(0.5), latencyTDigestSec.Quantile(0.8), latencyTDigestSec.Quantile(0.9), latencyTDigestSec.Quantile(0.99))
+			// fmt.Printf("%d,%.4f,%.4f,%.4f,%.4f\n", time.Now().Second(), latencyTDigestSec.Quantile(0.5), latencyTDigestSec.Quantile(0.8), latencyTDigestSec.Quantile(0.9), latencyTDigestSec.Quantile(0.99))
+			// fmt.Printf("%.4f\n", latencyTDigestSec.Quantile(0.99))
 			latencyTDigestSec.Reset()
 			total.merge(s)
 			s = newStats()
+		case <-minuteTicker.C:
+			if *verbose {
+				fmt.Printf("MIN_STAT(p50/p99):%.4f,%.4f\n\n", latencyTDigest.Quantile(0.5), latencyTDigest.Quantile(0.99))
+			}
+			latencyTDigest.Reset()
 		case d := <-durCh:
 			s.update(d)
 		case <-statCtx.Done():
-			// fmt.Println("\nTotal:")
-			// fmt.Println(total.Counter())
-			// fmt.Println(total.Percentage())
+			fmt.Println("\nTotal:")
+			fmt.Println(total.Counter())
+			fmt.Println(total.Percentage())
 			// Calculate the percentiles by using the tDigest algorithm.
-			// fmt.Printf("P0.5: %.4fms, P0.8: %.4fms, P0.9: %.4fms, P0.99: %.4fms\n\n", latencyTDigest.Quantile(0.5), latencyTDigest.Quantile(0.8), latencyTDigest.Quantile(0.9), latencyTDigest.Quantile(0.99))
-			// if *verbose {
-			// 	fmt.Println(collectMetrics(promServer))
-			// }
+			// fmt.Printf("MIN_STAT(p50/p99): %.4f,%.4f\n\n", latencyTDigest.Quantile(0.5), latencyTDigest.Quantile(0.99))
+			if *verbose {
+				fmt.Println(collectMetrics(promServer))
+			}
 			return
 		}
 	}
@@ -347,12 +356,13 @@ func (s *stats) merge(other *stats) {
 func (s *stats) Counter() string {
 	if s.count == 0 {
 		return fmt.Sprintf(
-			"secdata:%d,NaN,NaN,NaN", s.count)
+			"TS:%d min:NAN max:NAN SEC_STAT(rps/p50/p99):%d,", s.count)
 
 	} else {
 		return fmt.Sprintf(
-			"secdata:%d,%.4f,%.4f,%.4f",
-			s.count, float64(s.totalDur.Nanoseconds())/float64(s.count)/float64(time.Millisecond), float64(s.minDur.Nanoseconds())/float64(time.Millisecond), float64(s.maxDur.Nanoseconds())/float64(time.Millisecond))
+			"TS:%d min:%.4f max:%.4f SEC_STAT(rps/p50/p99):%d,",
+			time.Now().Unix(), float64(s.minDur.Nanoseconds())/float64(time.Millisecond), float64(s.maxDur.Nanoseconds())/float64(time.Millisecond), 
+			s.count )
 	}
 }
 
@@ -396,7 +406,7 @@ func reqWorker(ctx context.Context, pdCli pd.Client, durCh chan time.Duration, r
 			if errors.Cause(err) == context.Canceled {
 				return
 			} else if err == nil {
-				log.Info(fmt.Sprint(resultHigher, resultLower))
+				log.Debug(fmt.Sprint(resultHigher, resultLower))
 				break
 			} else {
 				// log.Error(fmt.Sprintf("%v", err))

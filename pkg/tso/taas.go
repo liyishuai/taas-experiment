@@ -39,8 +39,8 @@ type taasNode struct {
 	nodeId   int64
 	rootPath string
 	// When ltsPath is empty, it means that it is a global timestampOracle.
-	ttsPath string
-	storage endpoint.TSOStorage
+	ttsPath                string
+	storage                endpoint.TSOStorage
 	saveInterval           time.Duration
 	updatePhysicalInterval time.Duration
 	maxResetTSGap          func() time.Duration
@@ -52,8 +52,8 @@ type taasNode struct {
 }
 
 var (
-	taasLimitWarningLevel int64 = 60000 * 1
-	taasLimitUpdateLevel  int64 = 60000 * 10
+	taasLimitWarningLevel int64 = 6000000000 * 1
+	taasLimitUpdateLevel  int64 = 6000000000 * 10
 )
 
 func (t *taasNode) setTaasHigh(syncTs int64) error {

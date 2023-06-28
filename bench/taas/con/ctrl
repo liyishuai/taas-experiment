@@ -1,0 +1,269 @@
+#!/bin/python
+import os,sys
+import subprocess
+import argparse
+import commands
+import time
+import json
+import yaml
+import traceback
+import random
+from threading import Thread
+def Async(f):
+    def wrapper(*args, **kwargs):
+        thr = Thread(target=f, args=args, kwargs=kwargs)
+        thr.start()
+    return wrapper
+
+def ExecCmd(cmd):
+    print("exec cmd[%s]" % cmd)
+    p = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    stdout,stderr = p.communicate()
+    if p.returncode:
+        # traceback.print_exc()
+        raise Exception ("exec cmd[%s] failed, stdout[%s], stderr[%s]" % (cmd, stdout, stderr))
+    return (p.returncode, stdout, stderr)
+
+@Async
+def ExecCmdAsyncBlocking(cmd, delayTime=0):
+    delayTime = max(0, delayTime)
+    print("async exec cmd[%s] in %d second" % (cmd, delayTime))
+    time.sleep(delayTime)
+    p = subprocess.Popen(cmd, shell=False, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    stdout,stderr = p.communicate()
+    return (p.returncode, stdout, stderr)
+
+@Async
+def ExecCmdAsyncNoBlocking(cmd, delayTime=0):
+    delayTime = max(0, delayTime)
+    print("asyncnb exec cmd[%s] in %d second" % (cmd, delayTime))
+    time.sleep(delayTime)
+    p = subprocess.Popen(cmd, shell=False, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    # stdout,stderr = p.communicate()
+
+def ReadFromJsonFile(filePath):
+    if os.path.exists(filePath):
+        with open(filePath, 'r') as f:
+            res = json.loads(f.read())
+            return res
+
+def GetIpPrefix(ip):
+    ipParts = ip.split('.')
+    rt = ipParts[0] + "." + ipParts[1] + "." + ipParts[2]
+    return rt
+
+# Manipulate servers and clients
+def ServerUploadBinCfgs(serverList=[]):
+    pass
+
+def ClientUploadBinCfgs(clientList=[]):
+    pass
+
+def ServerStart(serverList=[]):
+    serverSize=len(serverList)
+    print serverList
+    serverStr=','.join(serverList)
+    print serverStr
+    index=1
+    for ip in serverList:
+       cmd=r"pssh -iH '%s' 'cd /home/admin/taas/server && make pd IPLIST=%s QUROMSIZE=%d INDEX=%d RESTART=start'"%(ip,serverStr,serverSize,index)
+       index=index+1
+       print cmd
+       ret=ExecCmdAsyncBlocking(cmd)
+
+def ServerEnd(serverList=[]):
+    for ip in serverList:
+        cmd=r"pssh -iH '%s' \"ps aux|grep pd-server|grep -v grep| awk -F ' ' '{print $2}'| xargs sudo kill -9 \""%(ip)
+        ret=ExecCmdAsyncBlocking(cmd)
+        cmd=r"pssh -iH '%s' 'rm -rf /home/admin/taas/server/pd'"%(ip)
+        ret=ExecCmdAsyncBlocking(cmd)
+        cmd=r"pssh -iH '%s' 'rm -rf /home/admin/taas/server/pd.log'"%(ip)
+        ret=ExecCmdAsyncBlocking(cmd)
+
+def ServerLookStatus(serverList=[]):
+    pass
+
+def findPDLeader(serverIp):
+    findLeadercmd = r"curl -s http://%s:3000/pd/api/v1/members|grep '\"leader\":' -A 5|grep http|awk -F '[:|/]' '{print $4}'" %(serverIp)
+    try:
+        st, outMsg, errMsg = ExecCmd(findLeadercmd)
+        if st != 0:
+            print "leader: err ", errMsg
+            return ""
+        print outMsg
+        leaderIp = outMsg.split("\n")[0].strip()
+        print "leader: ", leaderIp
+    except Exception,e:
+        print "leader: err ", str(e)
+    return leaderIp
+
+def ClientStart(client_num,currency_num,consensus_type,test_time,serverIp,log_path,clientList=[],serverList=[]):
+    # baseKillCmd = r"pssh -iH '%s' \"ps aux|grep pd-server|grep -v grep| awk -F ' ' '{print $2}'| xargs sudo kill -9 \""
+    baseKillCmd = r"pssh -iH '%s' 'pkill -9 pd-server'"
+    baseResumeCmd=r"pssh -iH '%s' 'cd /home/admin/taas/server && make pd IPLIST=%s QUROMSIZE=%d INDEX=%d RESTART=start '" 
+    serverMap = {}
+    indexMap = {}
+    for i in range(len(serverList)):
+        ip = serverList[i]
+        indexMap[ip] = i+1
+        azTag = GetIpPrefix(ip)
+        if azTag not in serverMap:
+            serverMap[azTag] = []
+        serverMap[azTag].append(ip)
+
+    leaderIp = findPDLeader(serverIp)
+    if len(serverMap) > 1:
+        # find leader az
+        leaderAzIpList = serverMap[GetIpPrefix(leaderIp)]
+        for azTag in serverMap:
+            if azTag != GetIpPrefix(leaderIp) and len(serverMap[azTag]) > 1:
+                noLeaderAzIpList = serverMap[azTag]
+        print "leader az: ", leaderAzIpList
+        print "no leader az: ", noLeaderAzIpList
+    # start client
+    for ip in clientList:
+        cmd=r"pssh -iH '%s' 'cd /home/admin/taas/client && make taas CLIENT_NUM=%s CURRENCY_NUM=%s CONSENSUS_TYPE=%s TEST_TIME=%s LOCAL_IP=%s LOG_PATH=%s LS=5000'"%(ip,client_num,currency_num,consensus_type,test_time,serverIp,log_path)
+        ret=ExecCmdAsyncNoBlocking(cmd)
+
+    if len(serverMap) > 1:
+        # start threads to stop and restart servers
+        opsIpList = noLeaderAzIpList if consensus_type=="taas" else leaderAzIpList
+        killCmd=r"pssh -iH '%s' \"ps aux|grep pd-server|grep -v grep| awk -F ' ' '{print $2}'| xargs sudo kill -9 \""%(" ".join(opsIpList))
+        ExecCmdAsyncNoBlocking(killCmd, 60)
+        for resumeIp in opsIpList:
+            resumeCmd=r"pssh -iH '%s' 'cd /home/admin/taas/server && make pd IPLIST=%s QUROMSIZE=%d INDEX=%d RESTART=start '"%(resumeIp,','.join(serverList),len(serverList),indexMap[resumeIp])
+            ret=ExecCmdAsyncNoBlocking(resumeCmd, 120) 
+        time.sleep(60)
+        print ",".join(opsIpList) + "az killed"
+        time.sleep(60)
+        print ",".join(opsIpList) + "az resumed"
+    else:
+        start = int(time.time())
+        chooseList = [x for x in serverList if x != leaderIp]
+        kill1 = chooseList[random.randint(0,len(chooseList)-1)] if consensus_type=="taas" else leaderIp
+        print " === Kill 1: " + kill1
+        killCmd=baseKillCmd%(kill1)
+        ExecCmdAsyncBlocking(killCmd, start+10-int(time.time()))
+        resumeCmd=baseResumeCmd%(kill1,','.join(serverList),len(serverList),indexMap[kill1])
+        ExecCmdAsyncBlocking(resumeCmd, start+180-int(time.time())) 
+        time.sleep(90)
+        chooseList = [x for x in chooseList if x != kill1]
+        leaderIp = findPDLeader(chooseList[0])
+        chooseList = [x for x in chooseList if x != leaderIp]
+        kill2 = chooseList[random.randint(0,len(chooseList)-1)] if consensus_type=="taas" else leaderIp
+        print " === Kill 2: " + kill2
+        killCmd=baseKillCmd%(kill2)
+        ExecCmdAsyncBlocking(killCmd, start+120-int(time.time()))
+        resumeCmd=baseResumeCmd%(kill2,','.join(serverList),len(serverList),indexMap[kill2]) 
+        ExecCmdAsyncBlocking(resumeCmd, start+240-int(time.time())) 
+    return ret
+
+def ClientEnd(clientList=[]):
+    for ip in clientList:
+        cmd=r"pssh -iH '%s' 'ps aux|grep pd-tso-bench|grep -v grep|xargs kill -9' "%(ip)
+        print cmd
+        ret=ExecCmdAsyncBlocking(cmd)
+    return
+
+def ClientLookStatus(clientList=[]):
+    pass
+
+def RecordClientOutput(consensusType, opCnt, limitCnt, clientList=[], serverList=[]):
+    clientListStr = ' '.join(x for x in clientList)
+    cmd = r"pssh -iH '%s' 'logf=/home/admin/;'" % (clientListStr)
+    ret = ExecCmdAsyncBlocking(cmd)
+    return ret
+
+def AllEnd(serverList=[], clientList=[]):
+    ServerEnd(serverList)
+    ClientEnd(clientList)
+
+def CustomCmd(customList=[], cmd="echo"):
+    customListStr = ' '.join("admin@"+x for x in customList)
+    cmd = r"pssh -iH '%s' '%s' " % (clientListStr, cmd)
+    ret = ExecCmd(cmd)
+    print (ret[1])
+    return ret
+def ServerSurvive(serverList=[]):
+    pass
+def ServerKillLeader(serverList=[]):
+    pass
+
+def IptableDropByIp(serverIp, dropIpList):
+    for rule in dropIpList:
+        try:
+            cmd = r"ssh admin@%s 'sudo iptables -I INPUT -s %s -j DROP'" % (serverIp, rule)
+            ExecCmdAsyncBlocking(cmd)
+        except Exception, e:
+            pass
+    return True
+
+def IptableAcceptByIp(serverIp, dropIpList):
+    for rule in dropIpList:
+        try:
+            cmd = r"ssh admin@%s 'sudo iptables -D INPUT -s %s -j DROP'" % (serverIp, rule)
+            ExecCmd(cmd)
+        except Exception, e:
+            pass
+    return True
+
+CTRL_FUNC_DICT = {
+    'sup': ServerUploadBinCfgs,
+    'cup': ClientUploadBinCfgs,
+    'ss' : ServerStart,
+    'se' : ServerEnd,
+    'sl' : ServerLookStatus,
+    'sk' : ServerKillLeader,
+    'su' : ServerSurvive,
+    'cs' : ClientStart,
+    'ce' : ClientEnd,
+    'cl' : ClientLookStatus,
+    'cr' : RecordClientOutput,
+    'ae' : AllEnd
+}
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Control rwpaxos test")
+    parser.add_argument("-c", "--cmd", required=True, help="Specify the commands to control.")
+    #parser.add_argument("-f", "--file", required=True, help="the control file")
+
+    args = parser.parse_args()
+    #print args.file
+    with open("./bench_cfg.yaml", 'r') as f:
+        benchCfg = yaml.load(f.read())
+    #return  0
+    serverList = benchCfg["ServerEndpoint"]
+    clientnum = benchCfg["ClientNum"]
+    currencynum=benchCfg["Concurency"]
+    clientList=benchCfg["ClientEndpoint"]
+    test_time=benchCfg["TestTime"]
+    killTime =benchCfg["KillTime"][0]
+    serverIp=serverList[0]
+    consensus_type=benchCfg["ConsensusType"]
+    clientLogName=benchCfg["ClientLogName"]
+    # Exec cmds
+    ctrlCmd = args.cmd
+    #client_num,currency_num,consensus_type,test_time, clientList=[]
+    print "Server: ", serverList
+    if CTRL_FUNC_DICT.has_key(ctrlCmd):
+        print (ctrlCmd)
+        func = CTRL_FUNC_DICT[ctrlCmd]
+        if ctrlCmd.startswith("cs"):
+            func(clientnum,currencynum,consensus_type,test_time,serverIp,clientLogName,clientList,serverList)
+        elif ctrlCmd.startswith("ss"):
+            func(serverList)
+        elif ctrlCmd.startswith("se"):
+            func(serverList)
+        elif ctrlCmd.startswith("ce"):
+            func(clientList)
+        elif ctrlCmd.startswith("cr"):
+            func(clientList, clientLogName) 
+    else:
+        if ctrlCmd.startswith("ca"):
+            for clientIp in clientList:
+                print "=== Test client : " + clientIp
+                ClientStart(clientnum,currencynum,consensus_type,test_time,serverIp,clientLogName,[clientIp],serverList)
+                time.sleep(30)
+                ClientEnd([clientIp])
+                time.sleep(5)
+        else:
+            CustomCmd(tList, ctrlCmd)
