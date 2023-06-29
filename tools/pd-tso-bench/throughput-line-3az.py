@@ -3,10 +3,13 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 
 plt.margins(0)
-throughput_max = 120000
-throughput_tick_num = 3
-throughput_ticks = [throughput_max/throughput_tick_num * i for i in range(throughput_tick_num+1)]
-throughput_labels = [str(int(t/1000))+"k" for t in throughput_ticks]
+# throughput_max = 120000
+# throughput_tick_num = 3
+# throughput_ticks = [throughput_max/throughput_tick_num * i for i in range(throughput_tick_num+1)]
+# throughput_labels = [str(int(t/1000))+"k" for t in throughput_ticks]
+throughput_max = 120e3
+throughput_ticks = [0, 30e3, 60e3, 90e3, 120e3]
+throughput_labels = ['0', '30k', '60k', '90k', '120k']
 
 time_range = 420
 time_ticks = [60 * i for i in range(0,int(time_range/60) + 1)]
@@ -65,8 +68,8 @@ if __name__ == "__main__":
     
     tso_time, tso_rps = list(tso_data.keys()), list(tso_data.values())
     taas_time, taas_rps = list(taas_data.keys()), list(taas_data.values())
-    plt.subplots_adjust(hspace=0.35)
     fig, axs = plt.subplots(2, 1, figsize=(8, 4))
+    plt.subplots_adjust(hspace=0.3)
 
     for i in range(len(axs)):
         # axs[i].set_xlabel('Time')
@@ -86,7 +89,7 @@ if __name__ == "__main__":
     axs[0].plot(taas_time, taas_rps, color='black')
     axs[0].set_title('TaaS', loc='left')
     axs[1].plot(tso_time, tso_rps, color='black', label="throughput")
-    axs[1].set_title('TIDB-PD', loc='left')
+    axs[1].set_title('TiDB-PD', loc='left')
 
     # fig.legend(ncol=4, loc='upper center')
     fig.subplots_adjust(top=.85)
