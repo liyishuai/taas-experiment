@@ -39,15 +39,22 @@ def ParseThrouputData(filePath):
     data = dict(sorted(data.items()))
     # Initialize a variable to store the starting timestamp
     start_ts = None
+    time_skew = 0
     # Loop through the dictionary items
     for ts, rps in data.items():
         # If start_ts is None, set it to the current timestamp
         if start_ts is None:
-            start_ts = ts
+            if int(rps) > 25000:
+                start_ts = int(ts)
+            else:
+                time_skew += 1
+                print (ts, rps)
+                continue
         # Calculate the elapsed time from the start_ts
         elapsed = int(ts) - int(start_ts)
         # Print the elapsed time and the aggregated throughput value
-        res[elapsed] = rps
+        if elapsed >= 0:
+            res[elapsed] = rps
     return res
 
 

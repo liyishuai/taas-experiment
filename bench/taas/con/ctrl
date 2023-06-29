@@ -114,7 +114,6 @@ def ClientStart(client_num,currency_num,consensus_type,test_time,serverIp,log_pa
     leaderIp = findPDLeader(serverIp)
     if len(serverMap) > 1:
         # find leader az
-        start = int(time.time())+2 # 2 seconds to warm up
         leaderAzIpList = serverMap[GetIpPrefix(leaderIp)]
         retryTimes = 0
         while retryTimes < 5 and \
@@ -144,10 +143,11 @@ def ClientStart(client_num,currency_num,consensus_type,test_time,serverIp,log_pa
         ret=ExecCmdAsyncNoBlocking(cmd)
 
     if len(serverMap) > 1:
+        start = int(time.time())+2 # 2 seconds to warm up
         # start threads to stop and restart servers
         opsIpList = noLeaderAzIpList if consensus_type=="taas" else leaderAzIpList
         killCmd=baseKillCmd%(" ".join(opsIpList))
-        ExecCmdAsyncBlocking(killCmd, 60)
+        ExecCmdAsyncBlocking(killCmd, 60+start-int(time.time()))
         for resumeIp in opsIpList:
             resumeCmd=baseResumeCmd%(resumeIp,','.join(serverList),len(serverList),indexMap[resumeIp])
             ret=ExecCmdAsyncBlocking(resumeCmd, 120+start-int(time.time())) 
