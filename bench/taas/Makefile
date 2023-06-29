@@ -22,7 +22,7 @@ pd:
 	@echo $(IPLIST)
 	@echo $(QUROMSIZE)
 	@echo $(INDEX)
-	bash run.sh $(IPLIST) $(QUROMSIZE) $(INDEX) $(RESTART)
+	nohup bash run.sh $(IPLIST) $(QUROMSIZE) $(INDEX) $(RESTART) > run.log 2>&1 &
 
 cl:
 	cd playground; for  ((i=1;i<=$(QUORUM_SIZE); i++)); do rm -rf p$$i; done;
@@ -34,6 +34,6 @@ taas:
 	@echo $(CONSENSUS_TYPE)
 	@echo $(TEST_TIME)
 	@echo $(LOCAL_IP)
-	./pd-tso-bench -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP):3000  -v -dc $(CONSENSUS_TYPE) -ln 20000 > $(LOG_PATH)
+	nohup ./pd-tso-bench -client $(CLIENT_NUM) -c $(CURRENCY_NUM) -duration $(TEST_TIME) -pd $(LOCAL_IP):3000  -v -dc $(CONSENSUS_TYPE) -ln 30000 > $(LOG_PATH) 2>&1 &
 
 .PHONY: pd taas cl 

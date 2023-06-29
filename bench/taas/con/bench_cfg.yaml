@@ -2,16 +2,16 @@ ServerEndpoint:
   - 33.2.128.6
   - 33.27.167.217
   - 33.27.167.218
-  - 33.64.128.222
-  - 33.64.128.223
+  - 33.64.129.139
+  - 33.64.129.140
 ClientEndpoint:
   - 33.2.128.5
   - 33.27.167.216
-  - 33.64.128.182
-TestTime: 3m
+  - 33.64.129.138
+TestTime: 3m4s
 KillTime:
   - 1m
-ClientNum: 10
-ClientLogName: 626-taas.log
-ConsensusType: taas
-Concurency: 10
+ClientNum: 50
+ClientLogName: 628-3az-global-50-2.log
+ConsensusType: global
+Concurency: 2

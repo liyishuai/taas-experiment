@@ -356,7 +356,7 @@ func (s *stats) merge(other *stats) {
 func (s *stats) Counter() string {
 	if s.count == 0 {
 		return fmt.Sprintf(
-			"TS:%d min:NAN max:NAN SEC_STAT(rps/p50/p99):%d,", s.count)
+			"TS:%d min:NAN max:NAN SEC_STAT(rps/p50/p99):%d,", time.Now().Unix(), s.count)
 
 	} else {
 		return fmt.Sprintf(
