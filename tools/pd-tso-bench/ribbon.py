@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import matplotlib.pyplot as plt
 import numpy as np
 import csv
@@ -7,17 +8,15 @@ from matplotlib.ticker import ScalarFormatter
 plt.margins(0)
 
 latency_min = 0.1
-latency_max = 10
-latency_ticks = [0.1, 0.4, 1, 4, 10]
-latency_labels = ['0.1', '0.4', '1', '4', '10']
-throughput_max = 80000
-throughput_ticks = [0, 2e4, 4e4, 6e4, 8e4]
-throughput_labels=['0', '20k', '40k', '60k', '80k']
+latency_max = 2
+latency_ticks = [0.1, 0.4, 1, 2]
+latency_labels = ['0.1', '0.4', '1', '2']
+throughput_max = 4e4
+throughput_ticks = [0, 1e4, 2e4, 3e4, 4e4]
+throughput_labels=['0', '10k', '20k', '30k', '40k']
 
 time_ticks = [0, 60, 120, 180, 240, 300]
 time_labels = ["0'00\"", "1'00\"", "2'00\"", "3'00\"", "4'00\"", "5'00\""]
-
-x = np.arange(0, 300, 1)
 
 tso_total = []
 tso0 = []
@@ -26,11 +25,11 @@ tso99 = []
 tso100 = []
 
 with open('tso.csv', encoding='utf-8-sig') as tso_file:
-    taas_read = csv.reader(tso_file, delimiter=',')
-    for row in taas_read:
+    tso_read = csv.reader(tso_file, delimiter=',')
+    for row in tso_read:
         for i in range(len(row)):
             if "NAN" in str(row[i]) or "MISS" in str(row[i]) :
-                row[0],row[1],row[2] = 0,0,0  
+                row[0],row[1],row[2] = 0,np.NaN,np.NaN  
                 break
         tso_total.append(float(row[0]))
         tso50.append(float(row[1]))
@@ -45,14 +44,14 @@ taas_latency = taas_throughput.twinx()
 taas_latency.set_title('TaaS', loc='left')
 tso_latency.set_title('TiDB-PD', loc='left')
 
-tso_latency.fill_between(x, [0 for i in range(len(tso50))], tso50, color='green')
-tso_latency.fill_between(x, tso50, tso99, color='orange')
+tso_latency.fill_between(np.arange(0, len(tso50), 1), [0 for i in range(len(tso50))], tso50, color='green')
+tso_latency.fill_between(np.arange(0, len(tso99), 1), tso50, tso99, color='orange')
 tso_latency.set_yscale('log')
 tso_latency.set_ylim(latency_min, latency_max)
-tso_latency.set_yticks(latency_ticks)
-tso_latency.set_yticklabels(latency_labels)
+tso_latency.set_yticks([0.1, 0.2, 0.3, 1, 2])
+tso_latency.set_yticklabels(['0.1', '0.2', '0.3', '1', '2'])
 
-tso_throughput.plot(x, tso_total, color='black', label='throughput')
+tso_throughput.plot(np.arange(0, len(tso_total), 1), tso_total, color='black', label='throughput')
 tso_throughput.set_ylim(0, throughput_max)
 tso_throughput.set_xlim(0, 300)
 tso_throughput.set_yticks(throughput_ticks)
@@ -68,8 +67,8 @@ taas99 = []
 taas100 = []
 
 with open('taas.csv', encoding='utf-8-sig') as taas_file:
-    taas_read = csv.reader(taas_file, delimiter=',')
-    for row in taas_read:
+    tso_read = csv.reader(taas_file, delimiter=',')
+    for row in tso_read:
         for i in range(len(row)):
             if "NAN" in str(row[i]) or "MISS" in str(row[i]) :
                 row[0],row[1],row[2] = 0,0,0  
@@ -81,14 +80,14 @@ with open('taas.csv', encoding='utf-8-sig') as taas_file:
 taas_throughput.set_ylim(0, throughput_max)
 taas_throughput.set_xlim(0, 300)
 
-taas_latency.fill_between(x, [0 for i in range(len(taas50))], taas50, color='green', label='latency 0~50%')
-taas_latency.fill_between(x, taas50, taas99, color='orange', label='latency 50~99%')
+taas_latency.fill_between(np.arange(0, len(taas50), 1), [0 for i in range(len(taas50))], taas50, color='green', label='50% latency')
+taas_latency.fill_between(np.arange(0, len(taas99), 1), taas50, taas99, color='orange', label='99% latency')
 taas_latency.set_yscale('log')
 taas_latency.set_ylim(latency_min, latency_max)
-taas_latency.set_yticks(latency_ticks)
-taas_latency.set_yticklabels(latency_labels)
+taas_latency.set_yticks([0.1, 0.2, 0.4, 0.7, 1, 2])
+taas_latency.set_yticklabels(['0.1', '0.2', '0.4', '0.7', '1', '2'])
 
-taas_throughput.plot(x, taas_total, color='black')
+taas_throughput.plot(np.arange(0, len(taas_total), 1), taas_total, color='black')
 taas_throughput.set_yticks(throughput_ticks)
 taas_throughput.set_yticklabels(throughput_labels)
 
