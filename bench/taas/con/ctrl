@@ -9,6 +9,10 @@ import yaml
 import traceback
 import random
 from threading import Thread
+
+MPS = 60 # min per sec
+
+
 def Async(f):
     def wrapper(*args, **kwargs):
         thr = Thread(target=f, args=args, kwargs=kwargs)
@@ -49,8 +53,14 @@ def ReadFromJsonFile(filePath):
 
 def GetIpPrefix(ip):
     ipParts = ip.split('.')
-    rt = ipParts[0] + "." + ipParts[1] + "." + ipParts[2]
-    return rt
+    # rt = ipParts[0] + "." + ipParts[1] + "." + ipParts[2]
+    rt = ipParts[0] + "." + ipParts[1]
+    ipPrefixAzMap = {
+        "33.2": "F",
+        "33.27": "G" ,
+        "33.64": "H"
+    }
+    return ipPrefixAzMap[rt] if rt in ipPrefixAzMap else ""
 
 # Manipulate servers and clients
 def ServerUploadBinCfgs(serverList=[]):
@@ -112,31 +122,6 @@ def ClientStart(client_num,currency_num,consensus_type,test_time,serverIp,log_pa
         serverMap[azTag].append(ip)
 
     leaderIp = findPDLeader(serverIp)
-    if len(serverMap) > 1:
-        # find leader az
-        leaderAzIpList = serverMap[GetIpPrefix(leaderIp)]
-        retryTimes = 0
-        while retryTimes < 5 and \
-              ((consensus_type == "taas" and len(leaderAzIpList) == 1) or \
-              (consensus_type != "taas" and len(leaderAzIpList) != 1)):
-            retryTimes += 1
-            print " === %s has wrong leader placement, retry %d times" % (consensus_type, retryTimes)
-            ExecCmd(baseKillCmd % leaderIp) 
-            time.sleep(10)
-            ExecCmd(baseResumeCmd % (leaderIp,','.join(serverList),len(serverList),indexMap[leaderIp]))
-            time.sleep(2)
-            leaderIp = findPDLeader(serverIp)
-            leaderAzIpList = serverMap[GetIpPrefix(leaderIp)] 
-        if (consensus_type == "taas" and len(leaderAzIpList) == 1) or \
-              (consensus_type != "taas" and len(leaderAzIpList) != 1):
-            exit(0)
-
-        noLeaderAzIpList = []
-        for azTag in serverMap:
-            if azTag != GetIpPrefix(leaderIp) and len(serverMap[azTag]) == 1:
-                noLeaderAzIpList = serverMap[azTag]
-        print "leader az: ", leaderAzIpList
-        print "no leader az: ", noLeaderAzIpList
     # start client
     for ip in clientList:
         cmd=r"pssh -iH '%s' 'cd /home/admin/taas/client && make taas CLIENT_NUM=%s CURRENCY_NUM=%s CONSENSUS_TYPE=%s TEST_TIME=%s LOCAL_IP=%s LOG_PATH=%s LS=5000'"%(ip,client_num,currency_num,consensus_type,test_time,serverIp,log_path)
@@ -144,18 +129,53 @@ def ClientStart(client_num,currency_num,consensus_type,test_time,serverIp,log_pa
 
     if len(serverMap) > 1:
         start = int(time.time())+2 # 2 seconds to warm up
+        azList = [az for az in serverMap.keys()]
         # start threads to stop and restart servers
-        opsIpList = noLeaderAzIpList if consensus_type=="taas" else leaderAzIpList
+        randIdx = random.randint(0,len(azList)-1)
+        opsAz = GetIpPrefix(leaderIp) if consensus_type!="taas" else azList[randIdx]
+        azList.remove(azList[randIdx])
+        print " ### First az " + opsAz
+        opsIpList = serverMap[opsAz]
         killCmd=baseKillCmd%(" ".join(opsIpList))
         ExecCmdAsyncBlocking(killCmd, 60+start-int(time.time()))
         for resumeIp in opsIpList:
             resumeCmd=baseResumeCmd%(resumeIp,','.join(serverList),len(serverList),indexMap[resumeIp])
             ret=ExecCmdAsyncBlocking(resumeCmd, 120+start-int(time.time())) 
-        time.sleep(60)
-        print ",".join(opsIpList) + " az killed"
-        time.sleep(60)
-        print ",".join(opsIpList) + " az resumed"
-        time.sleep(60)
+        time.sleep(60+start-int(time.time()))
+        print opsAz + " az killed: " + ",".join(opsIpList)
+
+        time.sleep(150+start-int(time.time()))
+        leaderIp = findPDLeader(serverIp)
+        randIdx = random.randint(0,len(azList)-1)
+        opsAz = GetIpPrefix(leaderIp) if consensus_type!="taas" else azList[randIdx]
+        azList.remove(azList[randIdx])
+        print " ### Second az " + opsAz
+        opsIpList = serverMap[opsAz]
+        killCmd=baseKillCmd%(" ".join(opsIpList))
+        ExecCmdAsyncBlocking(killCmd, 180+start-int(time.time()))
+        for resumeIp in opsIpList:
+            resumeCmd=baseResumeCmd%(resumeIp,','.join(serverList),len(serverList),indexMap[resumeIp])
+            ret=ExecCmdAsyncBlocking(resumeCmd, 240+start-int(time.time())) 
+        time.sleep(180+start-int(time.time()))
+        print opsAz + " az killed: " + ",".join(opsIpList)
+
+
+        time.sleep(270+start-int(time.time()))
+        leaderIp = findPDLeader(serverIp)
+        randIdx = random.randint(0,len(azList)-1)
+        opsAz = GetIpPrefix(leaderIp) if consensus_type!="taas" else azList[randIdx]
+        azList.remove(azList[randIdx])
+        print " ### Third az " + opsAz
+        opsIpList = serverMap[opsAz]
+        killCmd=baseKillCmd%(" ".join(opsIpList))
+        ExecCmdAsyncBlocking(killCmd, 300+start-int(time.time()))
+        for resumeIp in opsIpList:
+            resumeCmd=baseResumeCmd%(resumeIp,','.join(serverList),len(serverList),indexMap[resumeIp])
+            ret=ExecCmdAsyncBlocking(resumeCmd, 360+start-int(time.time())) 
+        time.sleep(300+start-int(time.time()))
+        print opsAz + " az killed: " + ",".join(opsIpList)
+
+        time.sleep(420+start-int(time.time()))
     else:
         start = int(time.time())+2 # 2 seconds to warm up
         chooseList = [x for x in serverList if x != leaderIp]

@@ -3,13 +3,14 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 
 plt.margins(0)
-throughput_max = 50000
-throughput_tick_num = 5
+throughput_max = 120000
+throughput_tick_num = 3
 throughput_ticks = [throughput_max/throughput_tick_num * i for i in range(throughput_tick_num+1)]
 throughput_labels = [str(int(t/1000))+"k" for t in throughput_ticks]
-time_ticks = [0, 60, 120, 180]
-time_labels = ["0'00\"", "1'00\"", "2'00\"", "3'00\""]
-time_range = 180
+
+time_range = 420
+time_ticks = [60 * i for i in range(0,int(time_range/60) + 1)]
+time_labels = ["%s'00\"" % i for i in range(0,int(time_range/60) + 1)]
 
 def ParseThrouputData(filePath):
 # Assuming the log data is stored in a file called log.txt
@@ -44,7 +45,7 @@ def ParseThrouputData(filePath):
     for ts, rps in data.items():
         # If start_ts is None, set it to the current timestamp
         if start_ts is None:
-            if int(rps) > 25000:
+            if int(rps) > 80000:
                 start_ts = int(ts)
             else:
                 time_skew += 1

@@ -8,10 +8,10 @@ ClientEndpoint:
   - 33.2.128.5
   - 33.27.167.216
   - 33.64.129.138
-TestTime: 3m4s
+TestTime: 7m10s
 KillTime:
   - 1m
-ClientNum: 50
-ClientLogName: 628-3az-global-50-2.log
+ClientNum: 60
+ClientLogName: 629-3az-global-50-2.log
 ConsensusType: global
 Concurency: 2
