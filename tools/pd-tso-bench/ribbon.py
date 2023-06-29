@@ -4,7 +4,7 @@ import numpy as np
 import csv
 from matplotlib.ticker import ScalarFormatter
 
-#plt.rc('font', size=8)
+# plt.rc('font', size=11)
 plt.margins(0)
 
 latency_min = 0.1

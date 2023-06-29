@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 
+plt.rc('font', size=16)
 plt.margins(0)
 # throughput_max = 120000
 # throughput_tick_num = 3
@@ -69,12 +70,12 @@ if __name__ == "__main__":
     tso_time, tso_rps = list(tso_data.keys()), list(tso_data.values())
     taas_time, taas_rps = list(taas_data.keys()), list(taas_data.values())
     fig, axs = plt.subplots(2, 1, figsize=(9, 4))
-    plt.subplots_adjust(hspace=0.3, left=0.08, right=0.92, bottom=0.12, top=1.0)
+    plt.subplots_adjust(hspace=0.4, left=0.12, right=0.92, bottom=0.18, top=1.0)
 
     for i in range(len(axs)):
         # axs[i].set_xlabel('Time')
         axs[i].set_ylabel('Throughput')
-        axs[i].yaxis.set_label_coords(-0.055, 0.5)
+        # axs[i].yaxis.set_label_coords(0.0, 0.5)
         # axs[i].set_frame_on(False)
         axs[i].set_yticks(throughput_ticks)
         axs[i].set_yticklabels(throughput_labels)
@@ -83,6 +84,8 @@ if __name__ == "__main__":
         if i == len(axs)-1:
             axs[i].set_xticks(time_ticks)
             axs[i].set_xticklabels(time_labels)
+            axs[i].tick_params(axis='x', which='both', pad=10) 
+            # axs[i].xaxis.set_label_coords(-0.01, 0.5)
             axs[i].set_xlabel("Time")
         else:
             axs[i].set_xticks(time_ticks)
