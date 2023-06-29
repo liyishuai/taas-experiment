@@ -35,8 +35,8 @@ with open('tso.csv', encoding='utf-8-sig') as tso_file:
         tso50.append(float(row[1]))
         tso99.append(float(row[2]))
 
-fig, (taas_throughput, tso_throughput) = plt.subplots(2, 1, sharex=True, figsize=(8, 4))
-plt.subplots_adjust(hspace=0.3)
+fig, (taas_throughput, tso_throughput) = plt.subplots(2, 1, sharex=True, figsize=(9, 4))
+plt.subplots_adjust(hspace=0.3, left=0.08, right=0.92, bottom=0.12, top=1.0)
 
 tso_latency = tso_throughput.twinx()
 taas_latency = taas_throughput.twinx()
@@ -92,7 +92,7 @@ taas_throughput.set_yticks(throughput_ticks)
 taas_throughput.set_yticklabels(throughput_labels)
 
 fig.subplots_adjust(top=.85)
-fig.legend(ncol=4, loc='upper center')
+fig.legend(ncol=4, loc='upper center', bbox_to_anchor=(0.5, 1.01))
 tso_latency.set_xlabel('Execution Time')
 tso_latency.set_ylabel('Latency (ms)')
 taas_latency.set_ylabel('Latency (ms)')
@@ -103,5 +103,5 @@ tso_throughput.set_frame_on(False)
 taas_throughput.set_frame_on(False)
 tso_throughput.set_zorder(tso_latency.zorder+1)
 taas_throughput.set_zorder(taas_latency.zorder+1)
-
+fig.subplots_adjust(top=.92)
 fig.savefig('result.pdf', format='pdf')

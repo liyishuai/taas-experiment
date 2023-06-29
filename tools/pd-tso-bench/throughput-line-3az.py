@@ -68,12 +68,13 @@ if __name__ == "__main__":
     
     tso_time, tso_rps = list(tso_data.keys()), list(tso_data.values())
     taas_time, taas_rps = list(taas_data.keys()), list(taas_data.values())
-    fig, axs = plt.subplots(2, 1, figsize=(8, 4))
-    plt.subplots_adjust(hspace=0.3)
+    fig, axs = plt.subplots(2, 1, figsize=(9, 4))
+    plt.subplots_adjust(hspace=0.3, left=0.08, right=0.92, bottom=0.12, top=1.0)
 
     for i in range(len(axs)):
         # axs[i].set_xlabel('Time')
         axs[i].set_ylabel('Throughput')
+        axs[i].yaxis.set_label_coords(-0.055, 0.5)
         # axs[i].set_frame_on(False)
         axs[i].set_yticks(throughput_ticks)
         axs[i].set_yticklabels(throughput_labels)
@@ -92,5 +93,5 @@ if __name__ == "__main__":
     axs[1].set_title('TiDB-PD', loc='left')
 
     # fig.legend(ncol=4, loc='upper center')
-    fig.subplots_adjust(top=.85)
+    fig.subplots_adjust(top=.92)
     fig.savefig('throughput-line-3az.pdf', format='pdf')
