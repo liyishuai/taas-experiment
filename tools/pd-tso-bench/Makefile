@@ -5,12 +5,12 @@
 result.pdf: ribbon.py tso.csv taas.csv
 	python3 $<
 
-throuput-line-3az.pdf: throuput-line-3az.py
+throughput-line-3az.pdf: throughput-line-3az.py
 	python3 $<
 
 latency-bar-3az.pdf: latency-bar-3az.py
 	python3 $<
 
-.PHONY: throuput-line-3az.pdf latency-bar-3az.pdf
+.PHONY: throughput-line-3az.pdf latency-bar-3az.pdf
 
-3az: throuput-line-3az.pdf latency-bar-3az.pdf 
+3az: throughput-line-3az.pdf latency-bar-3az.pdf 

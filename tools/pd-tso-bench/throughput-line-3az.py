@@ -12,10 +12,10 @@ time_range = 420
 time_ticks = [60 * i for i in range(0,int(time_range/60) + 1)]
 time_labels = ["%s'00\"" % i for i in range(0,int(time_range/60) + 1)]
 
-def ParseThrouputData(filePath):
+def ParsethroughputData(filePath):
 # Assuming the log data is stored in a file called log.txt
 # Open the file and read the lines
-# with open("throuput-line-3az.txt", "r") as f:
+# with open("throughput-line-3az.txt", "r") as f:
     with open(filePath, "r") as f:
         lines = f.readlines()
         data, res = {}, {}
@@ -60,8 +60,8 @@ def ParseThrouputData(filePath):
 
 
 if __name__ == "__main__":
-    tso_data = ParseThrouputData("throuput-line-3az-tso.log")
-    taas_data = ParseThrouputData("throuput-line-3az-taas.log")
+    tso_data = ParsethroughputData("throughput-line-3az-tso.log")
+    taas_data = ParsethroughputData("throughput-line-3az-taas.log")
     
     tso_time, tso_rps = list(tso_data.keys()), list(tso_data.values())
     taas_time, taas_rps = list(taas_data.keys()), list(taas_data.values())
@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
     for i in range(len(axs)):
         # axs[i].set_xlabel('Time')
-        axs[i].set_ylabel('Throuput')
+        axs[i].set_ylabel('throughput')
         # axs[i].set_frame_on(False)
         axs[i].set_yticks(throughput_ticks)
         axs[i].set_yticklabels(throughput_labels)
@@ -78,11 +78,11 @@ if __name__ == "__main__":
         axs[i].set_xticklabels(time_labels)
         axs[i].set_ylim(0, throughput_max)
         axs[i].set_xlim(0, time_range)
-    axs[0].plot(tso_time, tso_rps)
+    axs[0].plot(tso_time, tso_rps, color='black')
     axs[0].set_title('TIDB-PD')
-    axs[1].plot(taas_time, taas_rps)
+    axs[1].plot(taas_time, taas_rps, color='black', label="throughput")
     axs[1].set_title('TaaS')
 
     # fig.legend(ncol=4, loc='upper center')
     fig.subplots_adjust(top=.85)
-    fig.savefig('throuput-line-3az.pdf', format='pdf')
+    fig.savefig('throughput-line-3az.pdf', format='pdf')
