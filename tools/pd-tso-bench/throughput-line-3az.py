@@ -40,13 +40,13 @@ def ParsethroughputData(filePath):
     data = dict(sorted(data.items()))
     # Initialize a variable to store the starting timestamp
     start_ts = None
-    time_skew = 0
+    time_skew = 0 # filter warm-up time
     # Loop through the dictionary items
     for ts, rps in data.items():
         # If start_ts is None, set it to the current timestamp
         if start_ts is None:
             if int(rps) > 80000:
-                start_ts = int(ts)
+                start_ts = int(ts)+time_skew
             else:
                 time_skew += 1
                 print (ts, rps)
@@ -65,23 +65,28 @@ if __name__ == "__main__":
     
     tso_time, tso_rps = list(tso_data.keys()), list(tso_data.values())
     taas_time, taas_rps = list(taas_data.keys()), list(taas_data.values())
-    plt.subplots_adjust(hspace=0.3)
-    fig, axs = plt.subplots(2, 1, figsize=(10, 5))
+    plt.subplots_adjust(hspace=0.35)
+    fig, axs = plt.subplots(2, 1, figsize=(8, 4))
 
     for i in range(len(axs)):
         # axs[i].set_xlabel('Time')
-        axs[i].set_ylabel('throughput')
+        axs[i].set_ylabel('Throughput')
         # axs[i].set_frame_on(False)
         axs[i].set_yticks(throughput_ticks)
         axs[i].set_yticklabels(throughput_labels)
-        axs[i].set_xticks(time_ticks)
-        axs[i].set_xticklabels(time_labels)
         axs[i].set_ylim(0, throughput_max)
         axs[i].set_xlim(0, time_range)
-    axs[0].plot(tso_time, tso_rps, color='black')
-    axs[0].set_title('TIDB-PD')
-    axs[1].plot(taas_time, taas_rps, color='black', label="throughput")
-    axs[1].set_title('TaaS')
+        if i == len(axs)-1:
+            axs[i].set_xticks(time_ticks)
+            axs[i].set_xticklabels(time_labels)
+            axs[i].set_xlabel("Time")
+        else:
+            axs[i].set_xticks(time_ticks)
+            axs[i].set_xticklabels("")
+    axs[0].plot(taas_time, taas_rps, color='black')
+    axs[0].set_title('TaaS', loc='left')
+    axs[1].plot(tso_time, tso_rps, color='black', label="throughput")
+    axs[1].set_title('TIDB-PD', loc='left')
 
     # fig.legend(ncol=4, loc='upper center')
     fig.subplots_adjust(top=.85)
