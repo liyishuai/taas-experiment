@@ -8,10 +8,9 @@ plt.margins(0)
 # throughput_tick_num = 3
 # throughput_ticks = [throughput_max/throughput_tick_num * i for i in range(throughput_tick_num+1)]
 # throughput_labels = [str(int(t/1000))+"k" for t in throughput_ticks]
-throughput_max = 120e3
+throughput_max = 100e3
 throughput_ticks = [0, 90e3]
-# throughput_labels = ['0', '30k', '60k', '90k', '120k']
-throughput_labels = ['',  '90k']
+throughput_labels = ['0',  '90k']
 
 time_range = 420
 time_ticks = [60 * i for i in range(0,int(time_range/60) + 1)]
@@ -72,12 +71,13 @@ if __name__ == "__main__":
     taas_time, taas_rps = list(taas_data.keys()), list(taas_data.values())
     fig, axs = plt.subplots(2, 1, figsize=(9, 4))
     plt.subplots_adjust(hspace=0.8, left=0.12, right=0.92, bottom=0.18, top=1.0)
+    plt.rcParams['font.family'] = 'Helvetica'
 
     for i in range(len(axs)):
         # axs[i].set_xlabel('Time')
         axs[i].spines['top'].set_visible(False)
         axs[i].spines['right'].set_visible(False)
-        axs[i].spines['left'].set_visible(False)
+        #axs[i].spines['left'].set_visible(False)
         axs[i].set_yticks(throughput_ticks)
         axs[i].set_yticklabels(throughput_labels)
         axs[i].set_ylim(0, throughput_max)
@@ -87,15 +87,15 @@ if __name__ == "__main__":
             axs[i].set_xticklabels(time_labels)
             axs[i].tick_params(axis='x', which='both', pad=10) 
             # axs[i].xaxis.set_label_coords(-0.01, 0.5)
-            axs[i].set_xlabel("Time [seconds]")
-            axs[i].set_ylabel('Throughput [reqs / sec]')
+            axs[i].set_xlabel("Time")
+            axs[i].set_ylabel('Throughput')
             axs[i].yaxis.set_label_coords(-0.08, 1.2)
         else:
             axs[i].set_xticks(time_ticks)
             axs[i].set_xticklabels("")
-    axs[0].plot(taas_time, taas_rps, color='black')
+    axs[0].plot(taas_time, taas_rps, c='xkcd:violet')
     axs[0].set_title('TaaS', loc='left')
-    axs[1].plot(tso_time, tso_rps, color='black', label="throughput")
+    axs[1].plot(tso_time, tso_rps, c='xkcd:rust', label="throughput")
     axs[1].set_title('TiDB-PD', loc='left')
 
     # fig.legend(ncol=4, loc='upper center')
