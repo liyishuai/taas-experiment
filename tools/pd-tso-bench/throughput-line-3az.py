@@ -79,7 +79,7 @@ if __name__ == "__main__":
         axs[i].spines['right'].set_visible(False)
         axs[i].spines['left'].set_linewidth(2)
         axs[i].spines['bottom'].set_linewidth(2)
-        axs[i].tick_params(axis='both', which='major', width=2)
+        axs[i].tick_params(axis='both', which='major', width=2, length=6)
 
         #axs[i].spines['left'].set_visible(False)
         axs[i].set_yticks(throughput_ticks)
