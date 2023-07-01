@@ -76,7 +76,10 @@ if __name__ == "__main__":
     for i in range(len(axs)):
         # axs[i].set_xlabel('Time')
         axs[i].spines['top'].set_visible(False)
-        axs[i].spines['right'].set_visible(False)
+        axs[i].spines['left'].set_linewidth(2)
+        axs[i].spines['bottom'].set_linewidth(2)
+        axs[i].tick_params(axis='both', which='major', width=2)
+
         #axs[i].spines['left'].set_visible(False)
         axs[i].set_yticks(throughput_ticks)
         axs[i].set_yticklabels(throughput_labels)
@@ -93,9 +96,9 @@ if __name__ == "__main__":
         else:
             axs[i].set_xticks(time_ticks)
             axs[i].set_xticklabels("")
-    axs[0].plot(taas_time, taas_rps, c='xkcd:violet')
+    axs[0].plot(taas_time, taas_rps, c='xkcd:violet', linewidth=2)
     axs[0].set_title('TaaS', loc='left')
-    axs[1].plot(tso_time, tso_rps, c='xkcd:rust', label="throughput")
+    axs[1].plot(tso_time, tso_rps, c='xkcd:rust', label="throughput", linewidth=2)
     axs[1].set_title('TiDB-PD', loc='left')
 
     # fig.legend(ncol=4, loc='upper center')
