@@ -2,6 +2,8 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 
+taas_color = 'xkcd:violet'
+tso_color = 'xkcd:rust'
 # 从CSV文件中读取数据
 data = {}
 with open('latency-bar-3az.csv', newline='') as csvfile:
@@ -33,24 +35,28 @@ median1 = [data['TiDB-PD'][r]['median'] for r in regions]
 p99_1 = [data['TiDB-PD'][r]['p99'] for r in regions]
 p99_1 = [p-m for p, m in zip(p99_1, median1)]
 p99_1 = (np.zeros_like(p99_1), p99_1)
-rects1 = ax.bar(x - width/2, median1, width, label='TiDB-PD Median')
-ax.errorbar(x - width/2, median1, yerr=p99_1, fmt='_', capsize=4, label='TiDB-PD P99')
+rects1 = ax.bar(x - width/2, median1, width, label='TiDB-PD Median', color=tso_color)
+plotline1, caplines1, barlinecols1 = ax.errorbar(x - width/2, median1, yerr=p99_1, capsize=0, lolims=True, ls='None', label='TiDB-PD P99', color=tso_color)
+caplines1[0].set_marker('_')
+caplines1[0].set_markersize(12)
 
 median2 = [data['TaaS'][r]['median'] for r in regions]
 p99_2 = [data['TaaS'][r]['p99'] for r in regions]
 p99_2 = [p-m for p, m in zip(p99_2, median2)]
 p99_2 = (np.zeros_like(p99_2), p99_2)
-rects2 = ax.bar(x + width/2, median2, width, label='TaaS Median')
-ax.errorbar(x + width/2, median2, yerr=p99_2, fmt='_', capsize=4, label='TaaS P99')
+rects2 = ax.bar(x + width/2, median2, width, label='TaaS Median', color=taas_color)
+plotline2, caplines2, barlinecols2 = ax.errorbar(x + width/2, median2, yerr=p99_2, capsize=0, lolims=True, ls='None', label='TaaS P99', color=taas_color)
+caplines2[0].set_marker('_')
+caplines2[0].set_markersize(12)
 
 ax.set_ylabel('Latency (ms)')
 ax.set_title('Latency in 3AZ')
-ax.set_ybound(5.0)
-ax.set_yticks([x * 0.5 for x in range(0, 7)])
+ax.set_ybound(2.2)
+ax.set_yticks([x * 0.5 for x in range(0, 4)])
 ax.set_xticks(x)
 ax.set_xticklabels(regions)
 ax.legend(bbox_to_anchor=(0.99, 0.99), loc='upper right', borderaxespad=0.)
 
-plt.subplots_adjust(hspace=0.3)
+plt.subplots_adjust(hspace=0.1)
 fig.subplots_adjust(top=.85)
 fig.savefig('latency-bar-3az.pdf', format='pdf')

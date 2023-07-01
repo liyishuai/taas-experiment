@@ -1,4 +1,4 @@
-all: result.pdf throughput-line-3az.pdf
+all: result.pdf throughput-line-3az.pdf latency-bar-3az.pdf
 
 gray.pdf: result.pdf
 	-unalias gs
