@@ -76,6 +76,7 @@ if __name__ == "__main__":
     for i in range(len(axs)):
         # axs[i].set_xlabel('Time')
         axs[i].spines['top'].set_visible(False)
+        axs[i].spines['right'].set_visible(False)
         axs[i].spines['left'].set_linewidth(2)
         axs[i].spines['bottom'].set_linewidth(2)
         axs[i].tick_params(axis='both', which='major', width=2)
