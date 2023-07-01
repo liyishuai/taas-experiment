@@ -85,8 +85,8 @@ taas_latency.fill_between(np.arange(0, len(taas50), 1), [0 for i in range(len(ta
 taas_latency.fill_between(np.arange(0, len(taas99), 1), taas50, taas99, color='orange', label='99% latency')
 taas_latency.set_yscale('log')
 taas_latency.set_ylim(latency_min, latency_max)
-taas_latency.set_yticks([0.1, 0.2, 0.4, 0.7, 1])
-taas_latency.set_yticklabels(['0.1', '0.2', '0.4', '0.7', '1'])
+taas_latency.set_yticks([0.1, 0.3, 0.7, 1])
+taas_latency.set_yticklabels(['0.1', '0.3', '0.7', '1'])
 
 taas_throughput.plot(np.arange(0, len(taas_total), 1), taas_total, color='black')
 taas_throughput.set_yticks(throughput_ticks)
