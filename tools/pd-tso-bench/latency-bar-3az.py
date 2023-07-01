@@ -6,7 +6,8 @@ taas_edge_color = 'xkcd:violet'
 tso_edge_color = 'xkcd:rust'
 taas_color = 'white'
 tso_color = 'white'
-bar_skew = 0.02
+bar_skew = 0.04
+
 
 # 从CSV文件中读取数据
 data = {}
@@ -39,9 +40,8 @@ median1 = [data['TiDB-PD'][r]['median'] for r in regions]
 p99_1 = [data['TiDB-PD'][r]['p99'] for r in regions]
 p99_1 = [p-m for p, m in zip(p99_1, median1)]
 p99_1 = (np.zeros_like(p99_1), p99_1)
-rects1 = ax.bar(x - width/2 - bar_skew, median1, width, label='TiDB-PD Median', color=tso_color, hatch='\\', edgecolor=tso_edge_color)
-
-plotline1, caplines1, barlinecols1 = ax.errorbar(x - width/2 -bar_skew, median1, yerr=p99_1, capsize=0, lolims=True, ls='None', label='TiDB-PD P99', color=tso_color)
+rects1 = ax.bar(x - width/2 - bar_skew, median1, width, label='TiDB-PD Median', color=tso_color, hatch='\\\\', edgecolor=tso_edge_color)
+plotline1, caplines1, barlinecols1 = ax.errorbar(x - width/2 -bar_skew, median1, yerr=p99_1, capsize=0, lolims=True, ls='None', label='TiDB-PD P99', color='black')
 caplines1[0].set_marker('_')
 caplines1[0].set_markersize(12)
 
@@ -49,8 +49,8 @@ median2 = [data['TaaS'][r]['median'] for r in regions]
 p99_2 = [data['TaaS'][r]['p99'] for r in regions]
 p99_2 = [p-m for p, m in zip(p99_2, median2)]
 p99_2 = (np.zeros_like(p99_2), p99_2)
-rects2 = ax.bar(x + width/2 + bar_skew, median2, width, label='TaaS Median', color=taas_color, hatch="/", edgecolor=taas_edge_color)
-plotline2, caplines2, barlinecols2 = ax.errorbar(x + width/2 + bar_skew, median2, yerr=p99_2, capsize=0, lolims=True, ls='None', label='TaaS P99', color=taas_color)
+rects2 = ax.bar(x + width/2 + bar_skew, median2, width, label='TaaS Median', color=taas_color, hatch="//", edgecolor=taas_edge_color)
+plotline2, caplines2, barlinecols2 = ax.errorbar(x + width/2 + bar_skew, median2, yerr=p99_2, capsize=0, lolims=True, ls='None', label='TaaS P99', color='black')
 caplines2[0].set_marker('_')
 caplines2[0].set_markersize(12)
 
