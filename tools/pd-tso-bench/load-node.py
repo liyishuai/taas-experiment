@@ -24,8 +24,9 @@ fig, (taas_load, tidb_load) = plt.subplots(1, 2, figsize=(9, 4),sharey=True)
 taas_latency = taas_load.twinx()
 tidb_latency = tidb_load.twinx()
 
-taas_latency.bar(x,taas_p50,width,label='latency')
-plotline1, caplines1, barlinecols1 = taas_latency.errorbar(x, taas_p50, yerr=taas_p99, capsize=0, lolims=True,ls='None')
+error1 = taas_latency.errorbar(x, taas_p50, yerr=taas_p99, capsize=0, lolims=True,ls='None',label='99% latency',color='orange')
+box = taas_latency.bar(x,taas_p50,width,label='50% latency',color='green')
+plotline1, caplines1, barlinecols1 = error1
 caplines1[0].set_marker('_')
 caplines1[0].set_markersize(20)
 
@@ -34,40 +35,38 @@ taas_load.set_xlim(2,10)
 taas_load.set_xticks(x)
 taas_load.set_xticklabels(xlabels)
 
-taas_load.plot(x, taas_loads,color='black',label='load')
+line = taas_load.plot(x, taas_loads,color='black', label='load')
 taas_load.set_ylim(0,4)
 taas_load.set_ylabel('CPU Load')
-#taas_load.set_yticks([0,1,2,3,4])
 taas_load.set_zorder(taas_latency.zorder+1)
 taas_load.set_frame_on(False)
 
-tidb_load.set_title('TiDB',loc='left')
+
+tidb_load.set_title('TiDB-PD',loc='left')
 tidb_load.set_xticks(x)
 tidb_load.set_xticklabels(xlabels)
 tidb_load.set_xlim(2,10)
 
 tidb_load.plot(x, tidb_loads,color='black')
 
-tidb_latency.bar(x,tidb_p50,width)
-plotline2, caplines2, barlinecols2 = tidb_latency.errorbar(x, tidb_p50, yerr=tidb_p99, capsize=0, lolims=True,ls='None')
+tidb_latency.bar(x,tidb_p50,width,color='green')
+plotline2, caplines2, barlinecols2 = tidb_latency.errorbar(x, tidb_p50, yerr=tidb_p99, capsize=0, lolims=True,ls='None',color='orange')
 caplines2[0].set_marker('_')
 caplines2[0].set_markersize(20)
 
 latency_ticks = [0,.2,.4,.6,.8]
-#latency_ticks = []
 tidb_latency.set_ylim(0, 0.8)
 taas_latency.set_ylim(0, 0.8)
 taas_latency.set_yticks(latency_ticks)
 tidb_latency.set_yticks(latency_ticks)
 
-#tidb_latency.set_yticklabels(['' for _ in latency_ticks])
 taas_latency.set_yticklabels(['' for _ in latency_ticks])
 
 tidb_latency.set_ylabel('Latency (ms)')
 
 tidb_load.set_zorder(tidb_latency.zorder+1)
 tidb_load.set_frame_on(False)
-fig.legend(bbox_to_anchor=(.9, 1))
+fig.legend(handles=[error1, box, line[0]],bbox_to_anchor=(.9, .9))
 
 taas_load.spines['top'].set_visible(False)
 tidb_load.spines['top'].set_visible(False)
