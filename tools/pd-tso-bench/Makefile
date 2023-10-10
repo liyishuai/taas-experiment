@@ -19,3 +19,6 @@ latency-bar-3az.pdf: latency-bar-3az.py
 
 load-node.pdf: load-node.py
 	python3 $<
+
+parallel.pdf: parallel.py
+	python3 $<
