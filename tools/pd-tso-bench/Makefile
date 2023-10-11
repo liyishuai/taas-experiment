@@ -22,3 +22,6 @@ load-node.pdf: load-node.py
 
 parallel.pdf: parallel.py
 	python3 $<
+
+jitter.pdf: jitter.py
+	python3 $<

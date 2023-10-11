@@ -108,26 +108,59 @@ tidb.plot(x, tidb_rate,'o:',color='black')
 tidb.set_zorder(tidb_latency.zorder+1)
 tidb.set_frame_on(False)
 
-latency_ticks = [0, 0.5, 1.0, 1.5]
-tidb_latency.set_ylim(0, 1.5)
-taas3_latency.set_ylim(0, 1.5)
-taas5_latency.set_ylim(0, 1.5)
-taas7_latency.set_ylim(0, 1.5)
-taas9_latency.set_ylim(0, 1.5)
-tidb_latency.set_yticks(latency_ticks)
-taas3_latency.set_yticks(latency_ticks)
-taas5_latency.set_yticks(latency_ticks)
-taas7_latency.set_yticks(latency_ticks)
-taas9_latency.set_yticks(latency_ticks)
-taas3_latency.set_yticklabels(['' for _ in latency_ticks])
-taas5_latency.set_yticklabels(['' for _ in latency_ticks])
-taas7_latency.set_yticklabels(['' for _ in latency_ticks])
-taas9_latency.set_yticklabels(['' for _ in latency_ticks])
+# log_ticks = [0.1,0.2,0.5,1,2]
+
+# taas3_latency.set_yscale('log')
+# taas3_latency.set_ylim(0.1,2)
+# taas3_latency.set_yticks(log_ticks)
+# taas3_latency.set_yticklabels(['' for _ in log_ticks])
+
+# taas5_latency.set_yscale('log')
+# taas5_latency.set_ylim(0.1,2)
+# taas5_latency.set_yticks(log_ticks)
+# taas5_latency.set_yticklabels(['' for _ in log_ticks])
+
+# taas7_latency.set_yscale('log')
+# taas7_latency.set_ylim(0.1,2)
+# taas7_latency.set_yticks(log_ticks)
+# taas7_latency.set_yticklabels(['' for _ in log_ticks])
+
+# taas9_latency.set_yscale('log')
+# taas9_latency.set_ylim(0.1,2)
+# taas9_latency.set_yticks(log_ticks)
+# taas9_latency.set_yticklabels(['' for _ in log_ticks])
+
+# tidb_latency.set_yscale('log')
+# tidb_latency.set_ylim(0.1, 2)
+# tidb_latency.set_yticks(log_ticks)
+# tidb_latency.set_yticklabels(['%.1f' % xx for xx in log_ticks])
+
+linear_ticks = [0,0.2,0.4,0.6,0.8,1.0,1.2,1.4]
+
+taas3_latency.set_ylim(0,1.4)
+taas3_latency.set_yticks(linear_ticks)
+taas3_latency.set_yticklabels(['' for _ in linear_ticks])
+
+taas5_latency.set_ylim(0,1.4)
+taas5_latency.set_yticks(linear_ticks)
+taas5_latency.set_yticklabels(['' for _ in linear_ticks])
+
+taas7_latency.set_ylim(0,1.4)
+taas7_latency.set_yticks(linear_ticks)
+taas7_latency.set_yticklabels(['' for _ in linear_ticks])
+
+taas9_latency.set_ylim(0,1.4)
+taas9_latency.set_yticks(linear_ticks)
+taas9_latency.set_yticklabels(['' for _ in linear_ticks])
+
+tidb_latency.set_ylim(0,1.4)
+tidb_latency.set_yticks(linear_ticks)
+tidb_latency.set_yticklabels(['%.1f' % xx for xx in linear_ticks])
 tidb_latency.set_ylabel('Latency (ms)')
 
 tidb.set_zorder(tidb_latency.zorder+1)
 tidb.set_frame_on(False)
-lgd = fig.legend(handles=[line3[0], error3, box3],ncol=3,bbox_to_anchor=(.78,1.15))
+lgd = fig.legend(handles=[line3[0], box3, error3],ncol=3,bbox_to_anchor=(.78,1.15))
 
 taas3.spines['top'].set_visible(False)
 taas5.spines['top'].set_visible(False)
@@ -144,5 +177,5 @@ tidb_latency.spines['top'].set_visible(False)
 # ax.spines['bottom'].set_linewidth(2)
 
 plt.rcParams['font.family'] = 'Helvetica'
-xlabel = fig.supxlabel('Parallel Clients per Machine')
+xlabel = fig.supxlabel('# Parallel Clients per Machine')
 fig.savefig('parallel.pdf', format='pdf',bbox_extra_artists=(lgd,xlabel), bbox_inches='tight')
