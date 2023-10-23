@@ -51,7 +51,7 @@ taas3.set_xticks(x)
 taas3.set_xticklabels(xlabels)
 taas3.minorticks_off()
 
-line3 = taas3.plot(x, taas3_rate,'o:', color='black', label='throughput')
+line3 = taas3.plot(x, taas3_rate,'o-', color='black', label='throughput')
 taas3.set_ylim(3000,75000)
 taas3.set_yscale('log')
 taas3.set_yticks(throughput_ticks)
@@ -68,7 +68,7 @@ plotline5, caplines5, barlinecols5 = error5
 caplines5[0].set_marker('_')
 caplines5[0].set_markersize(15)
 
-taas5.plot(x, taas5_rate,'o:',color='black')
+taas5.plot(x, taas5_rate,'o-',color='black')
 taas5.set_zorder(taas5_latency.zorder+1)
 taas5.set_frame_on(False)
 
@@ -80,7 +80,7 @@ plotline7, caplines7, barlinecols7 = error7
 caplines7[0].set_marker('_')
 caplines7[0].set_markersize(15)
 
-taas7.plot(x, taas7_rate,'o:',color='black')
+taas7.plot(x, taas7_rate,'o-',color='black')
 taas7.set_zorder(taas7_latency.zorder+1)
 taas7.set_frame_on(False)
 
@@ -92,7 +92,7 @@ plotline9, caplines9, barlinecols9 = error9
 caplines9[0].set_marker('_')
 caplines9[0].set_markersize(15)
 
-taas9.plot(x, taas9_rate,'o:',color='black')
+taas9.plot(x, taas9_rate,'o-',color='black')
 taas9.set_zorder(taas9_latency.zorder+1)
 taas9.set_frame_on(False)
 
@@ -104,7 +104,7 @@ plotlinet, caplinest, barlinecolst = errort
 caplinest[0].set_marker('_')
 caplinest[0].set_markersize(15)
 
-tidb.plot(x, tidb_rate,'o:',color='black')
+tidb.plot(x, tidb_rate,'o-',color='black')
 tidb.set_zorder(tidb_latency.zorder+1)
 tidb.set_frame_on(False)
 

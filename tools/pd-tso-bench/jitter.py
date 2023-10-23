@@ -10,65 +10,138 @@ tso_color = 'white'
 plt.rc('font', size=16)
 plt.margins(0)
 
-width = 0.006
-x012 = np.arange(0, 6+width, width)
+width0 = 0.006
+x0 = np.arange(0, 6 + width0, width0)
 
-taas0_freq = [0 for _ in x012]
-taas1_freq = [0 for _ in x012]
-taas2_freq = [0 for _ in x012]
+width1 = 0.005
+x1 = np.arange(0, 6 + width1, width1)
+
+width2a = 0.003
+x2a = np.arange(0, 6+width2a, width2a)
+
+width2b = 0.06
+x2b = np.arange(0, 6 + width2b, width2b)
+
+width3 = 0.2
+x3 = np.arange(0, 6 + width3, width3)
+
+width4 = 0.2
+x4 = np.arange(0, 6 + width4, width4)
+
+width5 = 0.2
+x5 = np.arange(0, 6+width5, width5)
+
+taas0_freq = [0 for _ in x0]
+taas1_freq = [0 for _ in x1]
+taas2a_freq = [0 for _ in x2a]
+taas2b_freq = [0 for _ in x2b]
+taas3_freq = [0 for _ in x3]
+taas4_freq = [0 for _ in x4]
+taas5_freq = [0 for _ in x5]
 
 n0 = 0
 n1 = 0
 n2 = 0
+n3 = 0
+n4 = 0
+n5 = 0
 
 with open('taas0.csv', encoding='utf-8-sig') as file0:
     taas0_data = csv.reader(file0)
     for row in taas0_data:
         n0 = n0 + 1
-        index = int(float(row[0]) / 1000 / width)
+        index = int(float(row[0]) / 1000 / width0)
         taas0_freq[index] = taas0_freq[index] + 1
-taas0_pdf = [x / width / n0 for x in taas0_freq]
+taas0_pdf = [x / width0 / n0 for x in taas0_freq]
 
 with open('taas1.csv', encoding='utf-8-sig') as file1:
     taas1_data = csv.reader(file1)
     for row in taas1_data:
         n1 = n1 + 1
-        index = int(float(row[0]) / 1000 / width)
+        index = int(float(row[0]) / 1000 / width1)
         taas1_freq[index] = taas1_freq[index] + 1
-taas1_pdf = [x / width / n1 for x in taas1_freq]
+taas1_pdf = [x / width1 / n1 for x in taas1_freq]
 
 with open('taas2.csv', encoding='utf-8-sig') as file2:
     taas2_data = csv.reader(file2)
     for row in taas2_data:
         n2 = n2 + 1
-        index = int(float(row[0]) / 1000 / width)
-        taas2_freq[index] = taas2_freq[index] + 1
-taas2_pdf = [x / width / n2 for x in taas2_freq]
+        index_a = int(float(row[0]) / 1000 / width2a)
+        taas2a_freq[index_a] = taas2a_freq[index_a] + 1
+        index_b = int(float(row[0]) / 1000 / width2b)
+        taas2b_freq[index_b] = taas2b_freq[index_b] + 1
+taas2a_pdf = [x / width2a / n2 for x in taas2a_freq]
+taas2b_pdf = [x / width2b / n2 for x in taas2b_freq]
 
-taas3_freq = [0, 0, 0, 9, 44, 108, 191, 250, 366, 498, 569, 662, 732, 826, 892, 988, 932, 1014, 990, 1017, 939, 925, 900, 863, 820, 682, 607, 612, 554, 430, 409, 342, 307, 265, 236, 207, 153, 132, 100, 89, 85, 69, 40, 32, 33, 25, 19, 10, 11, 6, 3, 8, 3, 1, 2, 2, 0, 0, 1, 0, 0]
-taas3_pdf = [x / 2001.0 for x in taas3_freq]
+with open('taas3.csv', encoding='utf-8-sig') as file3:
+    taas3_data = csv.reader(file3)
+    for row in taas3_data:
+        n3 = n3 + 1
+        index = int(float(row[0]) / 1000 / width3)
+        if index < len(taas3_freq):
+            taas3_freq[index] = taas3_freq[index] + 1
+taas3_pdf = [x / width3 / n3 for x in taas3_freq]
 
-taas4_freq = [0, 0, 0, 0, 3, 4, 14, 23, 69, 97, 146, 203, 302, 379, 463, 573, 616, 795, 898, 902, 943, 1012, 1030, 1052, 1042, 989, 949, 904, 851, 828, 730, 663, 554, 537, 411, 401, 309, 275, 211, 165, 162, 123, 65, 72, 43, 53, 40, 18, 15, 16, 18, 13, 7, 7, 4, 2, 5, 1, 2, 1, 1]
-taas4_pdf = [x / 2001.2 for x in taas4_freq]
+with open('taas4.csv', encoding='utf-8-sig') as file4:
+    taas4_data = csv.reader(file4)
+    for row in taas4_data:
+        n4 = n4 + 1
+        index = int(float(row[0]) / 1000 / width4)
+        if index < len(taas4_freq):
+            taas4_freq[index] = taas4_freq[index] + 1
+taas4_pdf = [x / width4 / n4 for x in taas4_freq]
 
-taas5_freq = [0, 0, 0, 0, 0, 1, 1, 1, 8, 8, 24, 33, 66, 113, 136, 221, 261, 375, 474, 534, 695, 786, 880, 883, 934, 997, 1068, 1134, 1071, 1035, 989, 936, 864, 786, 722, 703, 578, 523, 422, 388, 306, 257, 156, 117, 128, 77, 73, 51, 46, 33, 33, 14, 22, 9, 11, 4, 6, 5, 5, 0, 0]
-taas5_pdf = [x / 2000.7 for x in taas5_freq]
+with open('taas5.csv', encoding='utf-8-sig') as file5:
+    taas5_data = csv.reader(file5)
+    for row in taas5_data:
+        n5 = n5 + 1
+        index = int(float(row[0]) / 1000 / width5)
+        if index < len(taas5_freq):
+            taas5_freq[index] = taas5_freq[index] + 1
+taas5_pdf = [x / width5 / n5 for x in taas5_freq]
 
-x_ticks = np.arange(0, 6.01, 0.1)
+ping_width = 0.09
+ping_x = np.arange(0, 6 + ping_width, ping_width)
+ping_freq = [0 for _ in ping_x]
+ping_n = 0
 
-ping_low = [0,0,386,403,391]
+with open('ping1.csv', encoding='utf-8-sig') as file_ping:
+    ping_data = csv.reader(file_ping)
+    for row in ping_data:
+        ping_n = ping_n + 1
+        index = int(float(row[0]) / ping_width)
+        ping_freq[index] = ping_freq[index] + 1
 
-ping_x = np.concatenate([np.arange(0, 0.2, 0.04), np.arange(0.2, 6.01, 0.1)])
+ping_pdf = [x / ping_width / ping_n for x in ping_freq]
 
-ping_high = [869,793,761,647,594,535,470,493,404,374,338,288,276,266,254,204,165,202,158,133,129,108,104,100,81,81,75,51,57,52,60,44,38,32,30,32,34,26,17,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-ping_pdf = [x / 400.0 for x in ping_low] + [x / 1000.0 for x in ping_high]
+tidb0_width = 0.005
+tidb0_x = np.arange(0, 6 + tidb0_width, tidb0_width)
+tidb_base = [0 for _ in tidb0_x]
+tidb0_n = 0
 
-tidb_base = [20132, 53, 17, 7, 2, 1]
-tidb_x = np.arange(0.1, 0.61, 0.1)
-tidb_pdf = [x / 2021.2 for x in tidb_base]
+tidb1_width = 0.09
+tidb1_x = np.arange(0, 6 + tidb1_width, tidb1_width)
+tidb_interrupt = [0 for _ in tidb1_x]
+tidb1_n = 0
 
-tidb_interrupt = [0, 52, 168, 284, 445, 571, 659, 771, 818, 855, 871, 962, 883, 918, 924, 879, 852, 788, 700, 658, 618, 640, 575, 534, 483, 453, 440, 355, 336, 343, 242, 308, 244, 225, 196, 172, 164, 167, 168, 127, 95, 43, 2, 1, 1, 3, 1, 1, 1, 1, 0, 1, 0, 2, 0, 2, 0, 2, 0, 1, 0]
-tidb_ipdf = [x / 2000.7 for x in tidb_interrupt]
+with open('tidb0.csv', encoding='utf-8-sig') as file_tidb0:
+    tidb0_data = csv.reader(file_tidb0)
+    for row in tidb0_data:
+        tidb0_n = tidb0_n + 1
+        index = int(float(row[0]) / 1000 / tidb0_width)
+        if index < len(tidb_base):
+            tidb_base[index] = tidb_base[index] + 1
+
+tidb_pdf = [x / tidb0_width / tidb0_n for x in tidb_base]
+
+with open('tidb1.csv', encoding='utf-8-sig') as file_tidb1:
+    tidb1_data = csv.reader(file_tidb1)
+    for row in tidb1_data:
+        tidb1_n = tidb1_n + 1
+        index = int(float(row[0]) / 1000 / tidb1_width)
+        if index < len(tidb_interrupt):
+            tidb_interrupt[index] = tidb_interrupt[index] + 1
+tidb_ipdf = [x / tidb1_width / tidb1_n for x in tidb_interrupt]
 
 # taas_x    = [0,1,2,3,4,5]
 # taas_p50  = [0.2597,0.3479,0.3633,2.0644,2.6300,3.0614]
@@ -111,44 +184,36 @@ tidb.set_title('TiDB-PD N=5',loc='left')
 
 taas012.set_ylabel('Density ($\mathrm{ms}^{-1}$)')
 
+taas012.plot(x0, taas0_pdf, ':g', label='all intact')
+taas012.plot(x1, taas1_pdf, dashes=[5, 1, 1, 1, 1, 1, 1, 1],color='y', label='1/5 interfered')
+taas012.plot(x2a, taas2a_pdf, dashes=[5, 2, 1, 2, 1, 2], color='c', label='2/5 interfered')
+
 upperi = 0.43
-upper012 = int(upperi/width)+1
-
-taas012.plot(x012[:upper012], taas0_pdf[:upper012], ':g', label='all intact')
-taas012.plot(x012[:upper012], taas1_pdf[:upper012], dashes=[5, 1, 1, 1, 1, 1, 1, 1],color='y', label='1/5 interfered')
-taas012.plot(x012[:upper012], taas2_pdf[:upper012], dashes=[5, 2, 1, 2, 1, 2], color='c', label='2/5 interfered')
-
-taas012.set_ylim(0, 22)
+taas012.set_ylim(0)
 taas012.set_xlim(0, upperi)
-taas012.set_xticks(np.arange(0, upperi+width, 0.1))
+# taas012.set_xticks(np.arange(0, upperi+0.01, 0.1))
 taas012.legend()
 
 taas345.set_ylim(0,1.1)
-taas345.set_yticks(np.arange(0, 1.1, 0.2))
+# taas345.set_yticks(np.arange(0, 1.1, 0.5))
 taas345.set_xlim(0,6)
 taas345.set_xticks([0,1,2,3,4,5,6])
 
-lower0 = int(0.2/width)
-lower12 = int(0.35/width)
-upper345 = int(1/width)
-
-# taas345.plot(x012[lower0:], taas0_pdf[lower0:], ':g')
-# taas345.plot(x012[lower12:], taas1_pdf[lower12:], dashes=[5, 1, 1, 1, 1, 1, 1, 1],color='y')
-taas345.plot(x012[lower12:], taas2_pdf[lower12:], dashes=[5, 2, 1, 2, 1, 2], color='c')
-taas345.plot(x_ticks, taas3_pdf, '-.b', label='3/5 interfered')
-taas345.plot(x_ticks, taas4_pdf, '--m', label='4/5 interfered')
-taas345.plot(x_ticks, taas5_pdf, '-r', label='all interfered')
+taas345.plot(x2b, taas2b_pdf, dashes=[5, 2, 1, 2, 1, 2], color='c')
+taas345.plot(x3, taas3_pdf, '-.b', label='3/5 interfered')
+taas345.plot(x4, taas4_pdf, '--m', label='4/5 interfered')
+taas345.plot(x5, taas5_pdf, '-r', label='all interfered')
 taas345.legend()
 
 ping_lower=3
 
 tidb.set_ylim(0,1.1)
-tidb.set_yticks(np.arange(0, 1.1, 0.2))
+# tidb.set_yticks(np.arange(0, 1.1, 0.5))
 tidb.set_xlim(0,6)
 tidb.set_xticks([0,1,2,3,4,5,6])
-tidb.plot(tidb_x, tidb_pdf, '-.g', label='leader intact')
-tidb.plot(x_ticks, tidb_ipdf, '-r', label='leader interfered')
-tidb.plot(ping_x[ping_lower:], ping_pdf[ping_lower:], ':k',label='interfered ping')
+tidb.plot(tidb0_x, tidb_pdf, '-.g', label='leader intact')
+tidb.plot(tidb1_x, tidb_ipdf, '-r', label='leader interfered')
+tidb.plot(ping_x, ping_pdf, ':k',label='interfered ping')
 tidb.legend()
 
 # lgd = fig.legend(handles=[box_taas,error_taas],ncol=2,bbox_to_anchor=(.78,1.15))
