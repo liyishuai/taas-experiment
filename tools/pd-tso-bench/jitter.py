@@ -205,8 +205,6 @@ taas345.plot(x4, taas4_pdf, '--m', label='4/5 interfered')
 taas345.plot(x5, taas5_pdf, '-r', label='all interfered')
 taas345.legend()
 
-ping_lower=3
-
 tidb.set_ylim(0,1.1)
 # tidb.set_yticks(np.arange(0, 1.1, 0.5))
 tidb.set_xlim(0,6)

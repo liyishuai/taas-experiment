@@ -31,7 +31,7 @@ tidb_rate = [6611,12700,23840,39460,69315]
 tidb_p50  = [0.1454,0.1484,0.1538,0.1677,0.1963]
 tidb_p99  = [0.1642,0.1802,0.1932,0.2155,0.2679]
 
-fig, (taas3,taas5,taas7,taas9,tidb) = plt.subplots(1, 5, figsize=(13, 4),sharey=True,sharex=True,constrained_layout=True)
+fig, (taas3,taas5,taas7,taas9,tidb) = plt.subplots(1, 5, figsize=(18, 4),sharey=True,sharex=True,constrained_layout=True)
 
 taas3_latency = taas3.twinx()
 taas5_latency = taas5.twinx()
@@ -56,7 +56,7 @@ taas3.set_ylim(3000,75000)
 taas3.set_yscale('log')
 taas3.set_yticks(throughput_ticks)
 taas3.set_yticklabels(throughput_labels)
-taas3.set_ylabel('Machine Throughput')
+taas3.set_ylabel('Timestamp / s')
 taas3.set_zorder(taas3_latency.zorder+1)
 taas3.set_frame_on(False)
 
@@ -160,7 +160,7 @@ tidb_latency.set_ylabel('Latency (ms)')
 
 tidb.set_zorder(tidb_latency.zorder+1)
 tidb.set_frame_on(False)
-lgd = fig.legend(handles=[line3[0], box3, error3],ncol=3,bbox_to_anchor=(.78,1.15))
+lgd = fig.legend(handles=[line3[0], box3, error3],ncol=3,loc='upper center', bbox_to_anchor=(.5,1.15))
 
 taas3.spines['top'].set_visible(False)
 taas5.spines['top'].set_visible(False)
@@ -177,5 +177,5 @@ tidb_latency.spines['top'].set_visible(False)
 # ax.spines['bottom'].set_linewidth(2)
 
 plt.rcParams['font.family'] = 'Helvetica'
-xlabel = fig.supxlabel('# Parallel Clients per Machine')
+xlabel = fig.supxlabel('# Parallel Sessions per Machine')
 fig.savefig('parallel.pdf', format='pdf',bbox_extra_artists=(lgd,xlabel), bbox_inches='tight')

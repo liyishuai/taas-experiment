@@ -1,4 +1,4 @@
-all: result.pdf throughput-line-3az.pdf latency-bar-3az.pdf load-node.pdf
+all: result.pdf throughput-line-3az.pdf latency-bar-3az.pdf load-node.pdf parallel.pdf jitter.pdf
 
 gray.pdf: result.pdf
 	-unalias gs
@@ -13,7 +13,7 @@ throughput-line-3az.pdf: throughput-line-3az.py
 latency-bar-3az.pdf: latency-bar-3az.py
 	python3 $<
 
-.PHONY: throughput-line-3az.pdf latency-bar-3az.pdf
+#.PHONY: throughput-line-3az.pdf latency-bar-3az.pdf
 
 3az: throughput-line-3az.pdf latency-bar-3az.pdf 
 
