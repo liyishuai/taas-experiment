@@ -150,7 +150,7 @@ tidb_ipdf = [x / tidb1_width / tidb1_n for x in tidb_interrupt]
 # tidb_p50  = [0.1456,0.1458,1.6446,1.6402]
 # tidb_p98  = [0.1635,0.1629,4.1534,4.1472]
 
-fig, (taas012, taas345,tidb) = plt.subplots(1, 3, figsize=(12, 4),sharex=False,sharey=False,constrained_layout=True)
+fig, (taas012, taas345,tidb) = plt.subplots(1, 3, figsize=(14, 4),sharex=False,sharey=False,constrained_layout=True)
 
 taas012.set_title('TaaS N=5',loc='left')
 # taas.set_xticks(taas_x)
