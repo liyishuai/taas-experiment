@@ -54,7 +54,7 @@ type taasRespEvent struct {
 const (
 	BottomTimestamp                 int64         = 0
 	TopTimestamp                    int64         = math.MaxInt64
-	DefaultTaasRpcTimeout           time.Duration = time.Second // 0.5ms for taas rpc timeout
+	DefaultTaasRpcTimeout           time.Duration = time.Millisecond * 10
 	DefaultTaasUpdateMemberInterval               = 3 * time.Second
 	// DefaultFastPathTimeout time.Duration = 5000 * time.Microsecond // 0.5ms for taas rpc timeout
 
